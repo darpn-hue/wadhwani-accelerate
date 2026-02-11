@@ -23,8 +23,36 @@ export const Login: React.FC = () => {
                 password,
             });
 
-            if (error) throw error;
-            navigate('/dashboard');
+            if (error) {
+                // AUTO-SIGNUP LOGIC FOR DEMO ACCOUNTS
+                if (error.message.includes('Invalid login credentials') && (email.includes('@example.com') || email.includes('@admin.com'))) {
+                    console.log('Demo account not found, attempting auto-signup...');
+                    const { error: signUpError } = await supabase.auth.signUp({
+                        email,
+                        password,
+                        options: {
+                            data: {
+                                full_name: email.includes('admin') ? 'Demo Admin' : 'Demo Entrepreneur',
+                            },
+                        },
+                    });
+
+                    if (signUpError) throw signUpError;
+
+                    // If signup successful (and emails auto-confirmed), user is logged in.
+                    // If email confirmation is required, this might still pause, but for many Supabase dev instances it's OFF.
+                    alert('Demo account created! Logging you in...');
+                    return; // The auth state change listener will handle the redirect
+                }
+                throw error;
+            }
+
+            // Manual redirect if needed (though onAuthStateChange usually handles this app-wide)
+            if (email.includes('admin') || email.includes('manager')) {
+                navigate('/vsm/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -50,7 +78,12 @@ export const Login: React.FC = () => {
         if (role === 'entrepreneur') {
             setEmail('rajesh@example.com');
             setPassword('password');
-            alert('Demo credentials pre-filled. Please ensure this user exists in Supabase or use Sign Up.');
+            // Assuming this user exists or will sign up
+        } else if (role === 'success_mgr') {
+            setEmail('meetul@admin.com');
+            setPassword('admin123');
+            // Mock VSM login trigger
+            navigate('/vsm/dashboard'); // Direct navigation for demo ease since we can't fully mock auth state without a real user in Supabase
         }
     };
 
@@ -150,7 +183,7 @@ export const Login: React.FC = () => {
 
                     <div className="text-center text-xs text-gray-400">
                         <div>Entrepreneur: rajesh@example.com / password</div>
-                        <div>Admin: meetul@admin.com / admin</div>
+                        <div>Admin: meetul@admin.com / admin123</div>
                     </div>
                 </div>
 

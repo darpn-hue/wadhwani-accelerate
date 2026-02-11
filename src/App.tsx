@@ -8,6 +8,8 @@ import { NewApplication } from './pages/NewApplication';
 import { VentureDetails } from './pages/VentureDetails';
 import { Monitor, RefreshCcw, Maximize2 } from 'lucide-react';
 import { AuthProvider } from './context/AuthContext';
+import { VSMDashboardLayout } from './layouts/VSMDashboardLayout';
+import { VSMDashboard } from './pages/VSMDashboard';
 
 const Header = () => (
   <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 w-full z-50">
@@ -35,6 +37,8 @@ function App() {
               <Welcome />
             </div>
           } />
+          {/* ... existing public routes ... */}
+
           <Route path="/login" element={
             <div className="min-h-screen bg-orange-50 pt-16 font-sans">
               <Header />
@@ -48,11 +52,16 @@ function App() {
             </div>
           } />
 
-          {/* Dashboard Routes */}
+          {/* Entrepreneur Dashboard Routes */}
           <Route path="/dashboard" element={<DashboardLayout />}>
             <Route index element={<MyVentures />} />
             <Route path="new-application" element={<NewApplication />} />
             <Route path="venture/:id" element={<VentureDetails />} />
+          </Route>
+
+          {/* Success Manager Dashboard Routes */}
+          <Route path="/vsm/dashboard" element={<VSMDashboardLayout />}>
+            <Route index element={<VSMDashboard />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

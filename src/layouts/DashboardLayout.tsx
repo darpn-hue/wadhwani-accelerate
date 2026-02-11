@@ -1,9 +1,12 @@
 import React from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Rocket, Grid, FileText, LogOut, Bell, User } from 'lucide-react';
+import { Rocket, Grid, FileText, LogOut, Bell } from 'lucide-react';
+
+import { useAuth } from '../context/AuthContext';
 
 export const DashboardLayout: React.FC = () => {
     const navigate = useNavigate();
+    const { signOut, user } = useAuth();
 
     return (
         <div className="flex h-screen bg-gray-50">
@@ -48,16 +51,19 @@ export const DashboardLayout: React.FC = () => {
 
                 <div className="p-4 border-t border-gray-200">
                     <div className="flex items-center gap-3 mb-4 px-2">
-                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                            <User className="w-5 h-5 text-gray-500" />
+                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold">
+                            {user?.email?.[0].toUpperCase() || 'E'}
                         </div>
                         <div className="flex-1 overflow-hidden">
-                            <div className="text-sm font-medium text-gray-900 truncate">Rajesh (Google)</div>
+                            <div className="text-sm font-medium text-gray-900 truncate">{user?.email || 'Entrepreneur'}</div>
                             <div className="text-xs text-gray-500 truncate">ENTREPRENEUR</div>
                         </div>
                     </div>
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={async () => {
+                            await signOut();
+                            navigate('/login');
+                        }}
                         className="flex items-center gap-2 px-2 text-sm text-red-600 font-medium hover:text-red-700 w-full"
                     >
                         <LogOut className="w-4 h-4" />

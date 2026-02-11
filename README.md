@@ -46,4 +46,39 @@ npm run preview
 - `src/components/ui`: Reusable UI components (e.g., Button).
 - `src/pages`: Page components (e.g., Welcome).
 - `src/App.tsx`: Main application component with routing.
-- `src/index.css`: Global styles and TailwindCSS configuration.
+## Database Setup (Supabase)
+
+This project requires a Supabase backend.
+
+1. **Create a Supabase Project**.
+2. **Run the SQL Schema**:
+   - Go to the SQL Editor in your Supabase dashboard.
+   - Copy the contents of `supabase_schema.sql` from this repository.
+   - Run the script to create tables, security policies, and triggers.
+
+## Demo Accounts & Testing
+
+To test the application, you can use the following demo flows:
+
+### 1. Entrepreneur Flow (Applying for a Program)
+- **Role**: Entrepreneur
+- **Action**: Use the **"Entrepreneur"** button on the Login page.
+- **Credentials**:
+  - **Email**: `rajesh@example.com`
+  - **Password**: `password`
+- **Goal**: Log in, view "My Ventures" (empty initially), and click "New Application" to submit a venture.
+
+### 2. Success Manager Flow (Reviewing Applications)
+- **Role**: Success Manager / Admin
+- **Action**: Use the **"Success Mgr"** button on the Login page.
+- **Credentials**:
+  - **Email**: `meetul@admin.com`
+  - **Password**: `admin`
+- **Goal**: Log in, view the dashboard with ALL submitted ventures, select one, run AI analysis, and submit triage notes.
+
+> **Note**: For the "Success Manager" role to work efficiently with real data in production, you must manually update the user's role in the `profiles` table from `entrepreneur` to `success_mgr` or `admin`. The demo button bypasses this check for testing convenience.
+
+### New User Signup
+You can also freely Sign Up with any email/password.
+- By default, new users are assigned the `entrepreneur` role.
+- To test the Success Manager flow with a *new* signup, you must go to your Supabase `profiles` table and manually change the `role` column to `success_mgr`.

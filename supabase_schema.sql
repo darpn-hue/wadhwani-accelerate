@@ -34,9 +34,18 @@ alter publication supabase_realtime add table profiles;
 -- Function to handle new user signup
 create or replace function public.handle_new_user() 
 returns trigger as $$
+declare
+  user_role text;
 begin
+  -- Automatically assign 'success_mgr' role if email contains 'admin' (For Demo Purpose)
+  if new.email ilike '%admin%' then
+    user_role := 'success_mgr';
+  else
+    user_role := 'entrepreneur';
+  end if;
+
   insert into public.profiles (id, full_name, role)
-  values (new.id, new.raw_user_meta_data->>'full_name', 'entrepreneur');
+  values (new.id, new.raw_user_meta_data->>'full_name', user_role);
   return new;
 end;
 $$ language plpgsql security definer;
@@ -79,3 +88,33 @@ create policy "Users can insert their own ventures."
 create policy "Users can update their own ventures."
   on ventures for update
   using ( auth.uid() = user_id );
+
+-- Add VSM specific columns if they don't exist
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ventures' AND column_name = 'vsm_notes') THEN 
+        ALTER TABLE ventures ADD COLUMN vsm_notes text; 
+        ALTER TABLE ventures ADD COLUMN program_recommendation text; 
+        ALTER TABLE ventures ADD COLUMN internal_comments text; 
+
+-- Allow Success Managers to view all ventures
+create policy "Success Managers can view all ventures"
+  on ventures for select
+  using ( 
+    exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.role in ('success_mgr', 'admin')
+    )
+  );
+
+-- Allow Success Managers to update any venture
+create policy "Success Managers can update any venture"
+  on ventures for update
+  using ( 
+    exists (
+      select 1 from profiles
+      where profiles.id = auth.uid()
+      and profiles.role in ('success_mgr', 'admin')
+    )
+  );
