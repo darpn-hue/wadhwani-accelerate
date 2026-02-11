@@ -14,7 +14,7 @@ export const Welcome: React.FC = () => {
 
                     <div className="relative z-10 space-y-6">
                         <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-                            AccelerateMentor
+                            Assisted Growth Platform
                         </h1>
                         <p className="text-orange-50 text-lg leading-relaxed max-w-md">
                             The Assisted Venture Growth Platform. From application to execution, we help you scale your venture with AI-driven insights and expert connections.

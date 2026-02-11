@@ -55,7 +55,7 @@ export const DashboardLayout: React.FC = () => {
                             {user?.email?.[0].toUpperCase() || 'E'}
                         </div>
                         <div className="flex-1 overflow-hidden">
-                            <div className="text-sm font-medium text-gray-900 truncate">{user?.email || 'Entrepreneur'}</div>
+                            <div className="text-sm font-medium text-gray-900 truncate">{user?.email || 'Venture'}</div>
                             <div className="text-xs text-gray-500 truncate">ENTREPRENEUR</div>
                         </div>
                     </div>
@@ -76,7 +76,7 @@ export const DashboardLayout: React.FC = () => {
             <div className="flex-1 ml-64 flex flex-col min-w-0 overflow-hidden">
                 {/* Top Header */}
                 <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-8">
-                    <h1 className="text-gray-500 text-sm">AccelerateMentor Workbench</h1>
+                    <h1 className="text-gray-500 text-sm">Assisted Growth Platform</h1>
                     <button className="text-gray-400 hover:text-gray-600">
                         <Bell className="w-5 h-5" />
                     </button>

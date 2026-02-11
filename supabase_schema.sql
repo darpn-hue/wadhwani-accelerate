@@ -3,7 +3,7 @@ create table profiles (
   id uuid references auth.users not null primary key,
   updated_at timestamp with time zone,
   full_name text,
-  role text check (role in ('entrepreneur', 'success_mgr', 'admin')),
+  role text check (role in ('entrepreneur', 'success_mgr', 'admin', 'committee_member')),
   avatar_url text,
   
   constraint username_length check (char_length(full_name) >= 3)
@@ -37,9 +37,11 @@ returns trigger as $$
 declare
   user_role text;
 begin
-  -- Automatically assign 'success_mgr' role if email contains 'admin' (For Demo Purpose)
+  -- Automatically assign roles based on email pattern (For Demo Purpose)
   if new.email ilike '%admin%' then
     user_role := 'success_mgr';
+  elsif new.email ilike '%committee%' then
+    user_role := 'committee_member';
   else
     user_role := 'entrepreneur';
   end if;
@@ -96,25 +98,31 @@ BEGIN
         ALTER TABLE ventures ADD COLUMN vsm_notes text; 
         ALTER TABLE ventures ADD COLUMN program_recommendation text; 
         ALTER TABLE ventures ADD COLUMN internal_comments text; 
+        
+        -- Committee Columns
+        ALTER TABLE ventures ADD COLUMN committee_feedback text;
+        ALTER TABLE ventures ADD COLUMN committee_decision text;
+    END IF;
+END $$;
 
--- Allow Success Managers to view all ventures
-create policy "Success Managers can view all ventures"
+-- Allow Success Managers and Committee to view all ventures
+create policy "Staff can view all ventures"
   on ventures for select
   using ( 
     exists (
       select 1 from profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('success_mgr', 'admin')
+      and profiles.role in ('success_mgr', 'admin', 'committee_member')
     )
   );
 
--- Allow Success Managers to update any venture
-create policy "Success Managers can update any venture"
+-- Allow Success Managers and Committee to update any venture
+create policy "Staff can update any venture"
   on ventures for update
   using ( 
     exists (
       select 1 from profiles
       where profiles.id = auth.uid()
-      and profiles.role in ('success_mgr', 'admin')
+      and profiles.role in ('success_mgr', 'admin', 'committee_member')
     )
   );

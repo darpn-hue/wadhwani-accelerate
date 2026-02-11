@@ -32,7 +32,7 @@ export const Login: React.FC = () => {
                         password,
                         options: {
                             data: {
-                                full_name: email.includes('admin') ? 'Demo Admin' : 'Demo Entrepreneur',
+                                full_name: email.includes('admin') ? 'Demo Admin' : email.includes('committee') ? 'Committee Member' : 'Demo Entrepreneur',
                             },
                         },
                     });
@@ -50,6 +50,8 @@ export const Login: React.FC = () => {
             // Manual redirect if needed (though onAuthStateChange usually handles this app-wide)
             if (email.includes('admin') || email.includes('manager')) {
                 navigate('/vsm/dashboard');
+            } else if (email.includes('committee')) {
+                navigate('/committee/dashboard');
             } else {
                 navigate('/dashboard');
             }
@@ -74,16 +76,64 @@ export const Login: React.FC = () => {
         }
     };
 
-    const handleDemoLogin = (role: string) => {
+    const handleDemoLogin = async (role: string) => {
+        let demoEmail = '';
+        let demoPassword = '';
+
         if (role === 'entrepreneur') {
-            setEmail('rajesh@example.com');
-            setPassword('password');
-            // Assuming this user exists or will sign up
+            demoEmail = 'rajesh@example.com';
+            demoPassword = 'password';
         } else if (role === 'success_mgr') {
-            setEmail('meetul@admin.com');
-            setPassword('admin123');
-            // Mock VSM login trigger
-            navigate('/vsm/dashboard'); // Direct navigation for demo ease since we can't fully mock auth state without a real user in Supabase
+            demoEmail = 'meetul@admin.com';
+            demoPassword = 'admin123';
+        } else if (role === 'committee') {
+            demoEmail = 'committee@admin.com';
+            demoPassword = 'admin123';
+        }
+
+        setEmail(demoEmail);
+        setPassword(demoPassword);
+
+        // Trigger auto-login
+        setLoading(true);
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email: demoEmail,
+                password: demoPassword,
+            });
+            if (error) {
+                // Fallback to auto-signup if login fails (similar to handleLogin)
+                if (error.message.includes('Invalid login credentials')) {
+                    const { error: signUpError } = await supabase.auth.signUp({
+                        email: demoEmail,
+                        password: demoPassword,
+                        options: {
+                            data: {
+                                full_name: role === 'success_mgr' ? 'Demo Admin' : 'Demo Entrepreneur',
+                            },
+                        },
+                    });
+                    if (signUpError) throw signUpError;
+                    // Login should happen automatically after signup in most dev envs,
+                    // or we can retry sign in.
+                    const { error: retryError } = await supabase.auth.signInWithPassword({
+                        email: demoEmail,
+                        password: demoPassword,
+                    });
+                    if (retryError) throw retryError;
+                } else {
+                    throw error;
+                }
+            }
+            // Navigation handled by auth state change or manually here
+            if (role === 'success_mgr') navigate('/vsm/dashboard');
+            else if (role === 'committee') navigate('/committee/dashboard');
+            else navigate('/dashboard');
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -171,19 +221,27 @@ export const Login: React.FC = () => {
                             onClick={() => handleDemoLogin('entrepreneur')}
                             className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-red-600 hover:text-red-600 hover:bg-red-50 transition-all"
                         >
-                            Entrepreneur
+                            Venture
                         </button>
                         <button
                             onClick={() => handleDemoLogin('success_mgr')}
                             className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-red-600 hover:text-red-600 hover:bg-red-50 transition-all"
                         >
-                            Success Mgr
+                            Success Manager
                         </button>
                     </div>
 
+                    <button
+                        onClick={() => handleDemoLogin('committee')}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-indigo-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                    >
+                        Committee Member
+                    </button>
+
                     <div className="text-center text-xs text-gray-400">
-                        <div>Entrepreneur: rajesh@example.com / password</div>
+                        <div>Venture: rajesh@example.com / password</div>
                         <div>Admin: meetul@admin.com / admin123</div>
+                        <div>Committee: committee@admin.com / admin123</div>
                     </div>
                 </div>
 

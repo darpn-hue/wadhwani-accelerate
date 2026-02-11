@@ -10,10 +10,11 @@ import { Monitor, RefreshCcw, Maximize2 } from 'lucide-react';
 import { AuthProvider } from './context/AuthContext';
 import { VSMDashboardLayout } from './layouts/VSMDashboardLayout';
 import { VSMDashboard } from './pages/VSMDashboard';
+import { CommitteeDashboard } from './pages/CommitteeDashboard';
 
 const Header = () => (
   <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 w-full z-50">
-    <div className="font-bold text-red-700 text-lg">AccelerateMentor Workbench</div>
+    <div className="font-bold text-red-700 text-lg">Assisted Growth Platform</div>
     <div className="flex items-center gap-4 text-gray-600">
       <div className="flex items-center gap-2">
         <Monitor className="w-5 h-5" />
@@ -63,6 +64,8 @@ function App() {
           <Route path="/vsm/dashboard" element={<VSMDashboardLayout />}>
             <Route index element={<VSMDashboard />} />
           </Route>
+
+          <Route path="/committee/dashboard" element={<CommitteeDashboard />} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

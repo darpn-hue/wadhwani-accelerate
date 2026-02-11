@@ -41,6 +41,8 @@ export const NewApplication: React.FC = () => {
         currentLocation: '',
         currentRevenue: '',
 
+        industry: '',
+
         newProduct: '',
         newSegment: '',
         newLocation: '',
@@ -62,6 +64,17 @@ export const NewApplication: React.FC = () => {
 
     const updateNeedStatus = (streamIndex: number, status: string) => {
         const newNeeds = [...formData.needs];
+
+        // Check constraint if selecting "Need Help"
+        if (status === 'Need Help') {
+            const currentNeedHelpCount = newNeeds.filter(n => n.status === 'Need Help').length;
+            // If we are changing TO 'Need Help' and we already have 3 (and this one isn't currently 'Need Help')
+            if (currentNeedHelpCount >= 3 && newNeeds[streamIndex].status !== 'Need Help') {
+                alert('You can only select up to 3 "Need Help" items.');
+                return;
+            }
+        }
+
         newNeeds[streamIndex].status = status;
         setFormData(prev => ({ ...prev, needs: newNeeds }));
     };
@@ -80,6 +93,7 @@ export const NewApplication: React.FC = () => {
                 status: 'Submitted',
 
                 growth_current: {
+                    industry: formData.industry,
                     product: formData.currentProduct,
                     segment: formData.currentCustomers,
                     geography: formData.currentLocation,
@@ -142,7 +156,7 @@ export const NewApplication: React.FC = () => {
                             What happens next?
                         </div>
                         <ul className="list-disc list-inside pl-1 space-y-1 text-blue-700">
-                            <li>Initial Screening by VSM</li>
+                            <li>Initial Screening by Venture Success Manager</li>
                             <li>Committee Review (for advanced tiers)</li>
                             <li>Agreement Generation</li>
                         </ul>
@@ -171,8 +185,8 @@ export const NewApplication: React.FC = () => {
                         <div key={step.id} className="flex flex-col items-center gap-2 bg-white px-2">
                             <div
                                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step.id <= currentStep
-                                        ? 'bg-red-600 text-white'
-                                        : 'bg-white border-2 border-gray-200 text-gray-400'
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-white border-2 border-gray-200 text-gray-400'
                                     }`}
                             >
                                 {step.id}
@@ -211,6 +225,15 @@ export const NewApplication: React.FC = () => {
                                 />
                             </div>
 
+                            <div className="grid grid-cols-2 gap-6">
+                                <Input
+                                    label="Industry *"
+                                    placeholder="e.g. Agri-Tech"
+                                    value={formData.industry}
+                                    onChange={(e) => updateField('industry', e.target.value)}
+                                />
+                            </div>
+
                             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-3 text-sm text-blue-700">
                                 <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
                                 <span>Change at least one of the 3 dimensions below (Product, Segment, Geo) to qualify as a "Growth Venture".</span>
@@ -219,15 +242,15 @@ export const NewApplication: React.FC = () => {
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Current State</span>
-                                    <Input placeholder="Current Product" value={formData.currentProduct} onChange={(e) => updateField('currentProduct', e.target.value)} />
-                                    <Input placeholder="Current Customers" value={formData.currentCustomers} onChange={(e) => updateField('currentCustomers', e.target.value)} />
-                                    <Input placeholder="Current Location" value={formData.currentLocation} onChange={(e) => updateField('currentLocation', e.target.value)} />
+                                    <Input placeholder="Product" value={formData.currentProduct} onChange={(e) => updateField('currentProduct', e.target.value)} />
+                                    <Input placeholder="Customer Segmentation" value={formData.currentCustomers} onChange={(e) => updateField('currentCustomers', e.target.value)} />
+                                    <Input placeholder="Geo Location" value={formData.currentLocation} onChange={(e) => updateField('currentLocation', e.target.value)} />
                                 </div>
                                 <div className="space-y-4">
                                     <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">New / Target State</span>
-                                    <Input placeholder="New Product Line" value={formData.newProduct} onChange={(e) => updateField('newProduct', e.target.value)} />
-                                    <Input placeholder="New Target Segment" value={formData.newSegment} onChange={(e) => updateField('newSegment', e.target.value)} />
-                                    <Input placeholder="Expansion Location" value={formData.newLocation} onChange={(e) => updateField('newLocation', e.target.value)} />
+                                    <Input placeholder="Product" value={formData.newProduct} onChange={(e) => updateField('newProduct', e.target.value)} />
+                                    <Input placeholder="Customer Segmentation" value={formData.newSegment} onChange={(e) => updateField('newSegment', e.target.value)} />
+                                    <Input placeholder="Geo Location" value={formData.newLocation} onChange={(e) => updateField('newLocation', e.target.value)} />
                                 </div>
                             </div>
 
@@ -288,10 +311,13 @@ export const NewApplication: React.FC = () => {
 
                     {currentStep === 3 && (
                         <>
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col gap-2">
                                 <div className="space-y-1">
                                     <h2 className="text-2xl font-bold text-gray-900">Status & Needs</h2>
                                     <p className="text-gray-500">For each stream, indicate the current status.</p>
+                                </div>
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+                                    We will be able to support you with 3 of the options below. So please select "Need Help" for only 3 items based on your needs and priority.
                                 </div>
                             </div>
 
@@ -305,8 +331,8 @@ export const NewApplication: React.FC = () => {
                                                     key={status}
                                                     onClick={() => updateNeedStatus(idx, status)}
                                                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${formData.needs[idx].status === status
-                                                            ? 'bg-red-50 border-red-500 text-red-700'
-                                                            : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                                                        ? 'bg-red-50 border-red-500 text-red-700'
+                                                        : 'border-gray-200 text-gray-600 hover:border-gray-400'
                                                         }`}
                                                 >
                                                     {status}

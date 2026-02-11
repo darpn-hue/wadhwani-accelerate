@@ -18,22 +18,22 @@ export const VSMDashboardLayout: React.FC = () => {
             {/* Sidebar */}
             <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-10">
                 <div className="p-6">
-                    <div className="flex items-center gap-2 text-blue-900 font-bold text-xl mb-8">
-                        <Rocket className="w-6 h-6 text-blue-600" />
+                    <div className="flex items-center gap-2 text-red-900 font-bold text-xl mb-8">
+                        <Rocket className="w-6 h-6 text-red-600" />
                         <span>Accelerate</span>
                     </div>
 
                     <nav className="space-y-1">
-                        <button className="w-full flex items-center gap-3 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg font-medium">
+                        <button className="w-full flex items-center gap-3 px-3 py-2 bg-red-50 text-red-700 rounded-lg font-medium">
                             <LayoutDashboard className="w-5 h-5" />
-                            VSM Dashboard
+                            Venture Success Manager Dashboard
                         </button>
                     </nav>
                 </div>
 
                 <div className="absolute bottom-0 w-full p-6 border-t border-gray-100">
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+                        <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold">
                             {user?.email?.[0].toUpperCase() || 'V'}
                         </div>
                         <div className="overflow-hidden">
@@ -58,7 +58,7 @@ export const VSMDashboardLayout: React.FC = () => {
             <main className="flex-1 ml-64 p-8">
                 <header className="flex justify-between items-center mb-8">
                     <h1 className="text-2xl font-bold text-gray-900">Venture Success Manager</h1>
-                    <div className="text-sm text-gray-500">AccelerateMentor Workbench</div>
+                    <div className="text-sm text-gray-500">Assisted Growth Platform</div>
                 </header>
 
                 <Outlet />

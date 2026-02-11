@@ -17,6 +17,7 @@ interface Venture {
     vsm_notes?: string;
     program_recommendation?: string;
     internal_comments?: string;
+    ai_analysis?: any;
 }
 
 export const VSMDashboard: React.FC = () => {
@@ -102,12 +103,23 @@ export const VSMDashboard: React.FC = () => {
             setVsmNotes(selectedVenture.vsm_notes || '');
             setProgram(selectedVenture.program_recommendation || '');
             setInternalComments(selectedVenture.internal_comments || '');
-            setAnalysisResult(null); // Reset analysis on change
+            setAnalysisResult(selectedVenture.ai_analysis || null);
         }
     }, [selectedVenture]);
 
     const handleSave = async () => {
         if (!selectedVenture) return;
+
+        // VALIDATION: Check required fields before submission
+        if (!program) {
+            alert("Please select a Recommended Program before submitting.");
+            return;
+        }
+        if (!vsmNotes || vsmNotes.length < 10) {
+            alert("Please add Triage Notes (min 10 chars) before submitting.");
+            return;
+        }
+
         setSaving(true);
         try {
             const { error } = await supabase
@@ -138,37 +150,64 @@ export const VSMDashboard: React.FC = () => {
         }
     };
 
-    const runAIAnalysis = () => {
+    const runAIAnalysis = async () => {
+        if (!selectedVenture) return;
         setAnalyzing(true);
-        // Simulate API call
-        setTimeout(() => {
-            setAnalysisResult({
+
+        // Simulate Context-Aware Analysis
+        setTimeout(async () => {
+            const newAnalysis = {
                 recommendation: 'Accelerate Core',
-                summary: `With ${selectedVenture?.growth_current?.revenue || 'existing'} revenue, ${selectedVenture?.name} fits the 5-25 Cr bracket perfectly. The pivot from a local model to an international AI Supply Chain OS requires the high-level scaling strategies and geographic expansion support characteristic of the Core program.`,
-                context: "Market Context: The Southeast Asian logistics market is undergoing rapid digital transformation driven by the 'China Plus One' strategy, creating high demand for supply chain visibility. However, the region is highly fragmented, requiring localized AI models and deep integration capabilities to compete with established incumbents.",
+                generated_at: new Date().toISOString(),
+                summary: `Based on the latest triage notes ("${vsmNotes.substring(0, 30)}...") and revenue data (${selectedVenture?.growth_current?.revenue || 'N/A'}), ${selectedVenture?.name} fits the 5-25 Cr bracket perfectly.`,
+                context: "Market Context: The Southeast Asian logistics market is undergoing rapid digital transformation.",
                 strengths: [
-                    "Proven revenue generation indicates a history of building products that customers are willing to pay for.",
-                    "Internal team size provides a significant technical foundation to accelerate the development of the AI-driven prototype.",
-                    "Validation through beta customers demonstrates initial feasibility and early-stage interest in the new OS pivot.",
-                    "Transitioning leverage existing domain expertise in enterprise resource management.",
-                    "Targeting Southeast Asia aligns with global trade shifts and high growth in cross-border logistics technology."
+                    "Proven revenue generation.",
+                    "Internal team size provides a significant technical foundation.",
+                    "Validation through beta customers.",
+                    "Transitioning leverage existing domain expertise.",
+                    "Targeting Southeast Asia aligns with global trade shifts."
                 ],
                 risks: [
-                    "Extreme geographic risk in pivoting to Southeast Asia without a local presence or established regional network.",
-                    "Potential resource dilution where the team may struggle to maintain legacy business while building a new AI platform.",
-                    "Low capital reserves relative to the scale of the pivot may be insufficient for international market entry.",
-                    "High competition from well-funded Silicon Valley and Singapore-based logistics startups.",
-                    "Risk of 'Feature Creep' as the founder moves from a structured ERP model to a more complex, predictive AI-driven OS."
+                    "Extreme geographic risk in pivoting to Southeast Asia.",
+                    "Potential resource dilution.",
+                    "Low capital reserves relative to the scale of the pivot.",
+                    "High competition from well-funded Silicon Valley startups.",
+                    "Risk of 'Feature Creep'."
                 ],
                 questions: [
-                    "What specific regulatory or logistical nuances of the Southeast Asian market have been incorporated into your AI prototype?",
-                    "How do you plan to balance the R&D costs of the new OS without compromising the service levels of your current revenue-generating ERP?",
-                    "What is the CAC (Customer Acquisition Cost) estimate for an Enterprise Logistics client in SEA compared to your historical SME data?",
-                    "Can you demonstrate a clear technical roadmap for how your team will transition from traditional coding to advanced AI/ML development?",
-                    "Are your two beta customers committed to long-term enterprise contracts, or are they temporary pilot programs without a clear path to monetization?"
+                    "What specific regulatory or logistical nuances have been incorporated?",
+                    "How do you plan to balance the R&D costs?",
+                    "What is the CAC estimate?",
+                    "Can you demonstrate a clear technical roadmap?",
+                    "Are your two beta customers committed to long-term contracts?"
                 ]
-            });
-            setAnalyzing(false);
+            };
+
+            // Save Analysis to DB
+            try {
+                const { error } = await supabase
+                    .from('ventures')
+                    .update({
+                        ai_analysis: newAnalysis
+                    })
+                    .eq('id', selectedVenture.id);
+
+                if (error) throw error;
+
+                setAnalysisResult(newAnalysis);
+
+                // Update local ventures state
+                setVentures(prev => prev.map(v =>
+                    v.id === selectedVenture.id ? { ...v, ai_analysis: newAnalysis } : v
+                ));
+
+            } catch (err) {
+                console.error("Failed to save AI analysis", err);
+                alert("Failed to save AI analysis");
+            } finally {
+                setAnalyzing(false);
+            }
         }, 2000);
     };
 
@@ -207,16 +246,25 @@ export const VSMDashboard: React.FC = () => {
                             <div
                                 key={v.id}
                                 onClick={() => { setSelectedVenture(v); setAnalysisResult(null); }}
-                                className={`p-4 cursor-pointer transition-colors hover:bg-blue-50 group ${selectedVenture?.id === v.id ? 'bg-blue-50 ring-1 ring-blue-200' : ''}`}
+                                className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 group ${selectedVenture?.id === v.id ? 'bg-red-50 border-r-2 border-red-500' : ''}`}
                             >
                                 <div className="flex justify-between items-start mb-1">
-                                    <h3 className="font-semibold text-gray-900 group-hover:text-blue-700">{v.name}</h3>
+                                    <h3 className={`font-semibold ${selectedVenture?.id === v.id ? 'text-red-900' : 'text-gray-900 group-hover:text-red-700'}`}>{v.name}</h3>
                                     <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">{v.status}</span>
                                 </div>
                                 <p className="text-sm text-gray-500 mb-2 line-clamp-2">{v.description}</p>
+
+                                {v.ai_analysis && (
+                                    <div className="mb-2">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">
+                                            <Sparkles className="w-3 h-3" />
+                                            AI Analysis Generated
+                                        </span>
+                                    </div>
+                                )}
                                 <div className="flex items-center justify-between text-xs text-gray-400">
                                     <span>{new Date(v.created_at).toLocaleDateString()}</span>
-                                    {selectedVenture?.id === v.id && <ChevronRight className="w-4 h-4 text-blue-600" />}
+                                    {selectedVenture?.id === v.id && <ChevronRight className="w-4 h-4 text-red-600" />}
                                 </div>
                             </div>
                         ))
@@ -250,31 +298,31 @@ export const VSMDashboard: React.FC = () => {
                                     </p>
                                 </div>
                                 <div>
-                                    <span className="text-xs font-bold text-gray-500 uppercase">Business Stats</span>
+                                    <span className="text-xs font-bold text-gray-500 uppercase">Details</span>
                                     <p className="text-sm font-medium text-gray-900 mt-1">
-                                        Rev: {selectedVenture.growth_current?.revenue} <span className="mx-2">|</span> Opp: {selectedVenture.growth_target?.revenue}
+                                        Ind: {selectedVenture.growth_current?.industry || 'N/A'} <span className="mx-2">|</span> Rev: {selectedVenture.growth_current?.revenue}
                                     </p>
                                 </div>
                             </div>
                         </div>
 
                         {/* AI Deep Dive Section */}
-                        <div className="border border-blue-100 rounded-xl overflow-hidden">
-                            <div className="bg-blue-50/50 p-4 border-b border-blue-100 flex items-center gap-2">
-                                <Sparkles className="w-5 h-5 text-blue-600" />
-                                <h3 className="font-bold text-blue-900">Gemini AI Deep Dive</h3>
+                        <div className="border border-red-100 rounded-xl overflow-hidden">
+                            <div className="bg-red-50/50 p-4 border-b border-red-100 flex items-center gap-2">
+                                <Sparkles className="w-5 h-5 text-red-600" />
+                                <h3 className="font-bold text-red-900">Gemini AI Deep Dive</h3>
                             </div>
 
                             {!analysisResult ? (
                                 <div className="p-12 flex flex-col items-center text-center">
-                                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4 text-blue-600">
+                                    <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600">
                                         <Sparkles className="w-6 h-6" />
                                     </div>
                                     <h4 className="text-lg font-semibold text-gray-900 mb-2">Generate Deep Dive Analysis</h4>
                                     <p className="text-gray-500 max-w-md mb-6">
                                         Analyze sector trends, product pivot viability, and identify key strengths & risks using our AI engine.
                                     </p>
-                                    <Button onClick={runAIAnalysis} disabled={analyzing} className="w-auto px-8">
+                                    <Button onClick={runAIAnalysis} disabled={analyzing} className="w-auto px-8 bg-black hover:bg-gray-800">
                                         {analyzing ? (
                                             <span className="flex items-center gap-2">
                                                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -298,7 +346,7 @@ export const VSMDashboard: React.FC = () => {
                                                 {analysisResult.context}
                                             </p>
                                         </div>
-                                        <span className="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded text-xs whitespace-nowrap">
+                                        <span className="bg-red-100 text-red-700 font-bold px-3 py-1 rounded text-xs whitespace-nowrap">
                                             {analysisResult.recommendation}
                                         </span>
                                     </div>
@@ -322,15 +370,15 @@ export const VSMDashboard: React.FC = () => {
                                         </div>
 
                                         {/* Red Flags */}
-                                        <div className="bg-red-50 rounded-xl p-4 border border-red-100">
-                                            <div className="flex items-center gap-2 mb-3 text-red-800 font-bold text-sm">
+                                        <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                                            <div className="flex items-center gap-2 mb-3 text-orange-800 font-bold text-sm">
                                                 <AlertTriangle className="w-4 h-4" />
                                                 <span>5 Red Flags (Risks)</span>
                                             </div>
                                             <ul className="space-y-2">
                                                 {analysisResult.risks.map((s: string, i: number) => (
-                                                    <li key={i} className="flex gap-2 text-xs text-red-900 leading-relaxed">
-                                                        <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5 text-red-600/[0.5]" />
+                                                    <li key={i} className="flex gap-2 text-xs text-orange-900 leading-relaxed">
+                                                        <XCircle className="w-3 h-3 flex-shrink-0 mt-0.5 text-orange-600/[0.5]" />
                                                         {s}
                                                     </li>
                                                 ))}
@@ -339,15 +387,15 @@ export const VSMDashboard: React.FC = () => {
                                     </div>
 
                                     {/* Probing Questions */}
-                                    <div className="bg-blue-50/30 rounded-xl p-5 border border-blue-100">
-                                        <div className="flex items-center gap-2 mb-3 text-blue-800 font-bold text-sm">
-                                            <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-xs">?</span>
-                                            <span>VSM Probing Questions</span>
+                                    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                                        <div className="flex items-center gap-2 mb-3 text-gray-800 font-bold text-sm">
+                                            <span className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center text-xs">?</span>
+                                            <span>Venture Success Manager Probing Questions</span>
                                         </div>
                                         <ul className="space-y-2">
                                             {analysisResult.questions.map((q: string, i: number) => (
-                                                <li key={i} className="flex gap-3 text-sm text-blue-900">
-                                                    <span className="flex-shrink-0 w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs font-bold text-blue-300 border border-blue-100 shadow-sm">{i + 1}</span>
+                                                <li key={i} className="flex gap-3 text-sm text-gray-700">
+                                                    <span className="flex-shrink-0 w-5 h-5 bg-white rounded-full flex items-center justify-center text-xs font-bold text-gray-500 border border-gray-200 shadow-sm">{i + 1}</span>
                                                     <span>{q}</span>
                                                 </li>
                                             ))}
@@ -373,7 +421,7 @@ export const VSMDashboard: React.FC = () => {
                             <div className="space-y-2">
                                 <label className="text-xs font-medium text-gray-500 uppercase">Founder Call Transcript / Notes</label>
                                 <textarea
-                                    className="w-full h-32 rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                    className="w-full h-32 rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
                                     placeholder="Paste interview notes here..."
                                     value={vsmNotes}
                                     onChange={(e) => setVsmNotes(e.target.value)}
@@ -399,7 +447,7 @@ export const VSMDashboard: React.FC = () => {
                                     <label className="text-xs font-medium text-gray-500 uppercase">Internal Comments</label>
                                     <input
                                         type="text"
-                                        className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                        className="w-full rounded-lg border border-gray-300 p-2 text-sm focus:ring-2 focus:ring-red-500 focus:outline-none"
                                         placeholder="Final recommendation notes..."
                                         value={internalComments}
                                         onChange={(e) => setInternalComments(e.target.value)}
@@ -408,8 +456,22 @@ export const VSMDashboard: React.FC = () => {
                             </div>
 
                             <div className="flex justify-end gap-3 pt-4">
-                                <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">Reject</Button>
-                                <Button onClick={handleSave} disabled={saving}>{saving ? 'Saving...' : 'Submit to Committee'}</Button>
+                                {/* Reject button removed as per request */}
+                                <Button
+                                    onClick={handleSave}
+                                    disabled={saving || ['Under Review', 'Approved', 'Rejected'].includes(selectedVenture.status)}
+                                    className={`
+                                        ${['Under Review', 'Approved', 'Rejected'].includes(selectedVenture.status)
+                                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed hover:bg-gray-100'
+                                            : 'bg-red-600 hover:bg-red-700'}
+                                    `}
+                                >
+                                    {saving ? 'Saving...' :
+                                        selectedVenture.status === 'Under Review' ? 'Submitted' :
+                                            selectedVenture.status === 'Approved' ? 'Approved' :
+                                                selectedVenture.status === 'Rejected' ? 'Rejected' :
+                                                    'Submit to Committee'}
+                                </Button>
                             </div>
                         </div>
 
@@ -421,6 +483,6 @@ export const VSMDashboard: React.FC = () => {
             <div className="hidden">
                 <LayoutDashboard />
             </div>
-        </div>
+        </div >
     );
 };
