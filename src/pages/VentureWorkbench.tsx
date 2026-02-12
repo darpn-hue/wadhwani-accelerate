@@ -1,15 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, CheckCircle, FileText, Loader2, PenTool } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-
-// Mock Data for Workbench Dashboard
-const MOCK_JOURNEY = [
-    { stream: 'Business', owner: 'Founder', end: 'Oct 2025', status: 'On Track' },
-    { stream: 'Financials', owner: 'CFO', end: 'Dec 2025', status: 'At Risk' },
-    { stream: 'Product', owner: 'CTO', end: 'Jan 2026', status: 'Delayed' },
-];
 
 export const VentureWorkbench = () => {
     const { id } = useParams<{ id: string }>();
