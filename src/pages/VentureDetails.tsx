@@ -11,6 +11,8 @@ export const VentureDetails: React.FC = () => {
     const [venture, setVenture] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    const [streams, setStreams] = useState<any[]>([]);
+
     useEffect(() => {
         if (id && user) {
             fetchVenture(id);
@@ -19,14 +21,25 @@ export const VentureDetails: React.FC = () => {
 
     const fetchVenture = async (ventureId: string) => {
         try {
-            const { data, error } = await supabase
+            // 1. Fetch Venture Data
+            const { data: ventureData, error: ventureError } = await supabase
                 .from('ventures')
                 .select('*')
                 .eq('id', ventureId)
                 .single();
 
-            if (error) throw error;
-            setVenture(data);
+            if (ventureError) throw ventureError;
+            setVenture(ventureData);
+
+            // 2. Fetch Streams (Needs)
+            const { data: streamsData, error: streamsError } = await supabase
+                .from('venture_streams')
+                .select('*')
+                .eq('venture_id', ventureId);
+
+            if (streamsError) console.error('Error fetching streams:', streamsError);
+            setStreams(streamsData || []);
+
         } catch (err) {
             console.error('Error fetching venture:', err);
             navigate('/dashboard'); // Redirect on error
@@ -147,17 +160,21 @@ export const VentureDetails: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
                 <h3 className="text-lg font-bold text-gray-900">Self-Assessment Needs</h3>
                 <div className="space-y-3">
-                    {venture.needs?.map((need: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50/50">
-                            <span className="font-medium text-gray-700">{need.stream}</span>
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${need.status === 'Done' ? 'bg-green-100 text-green-800' :
-                                    need.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-red-100 text-red-800'
-                                }`}>
-                                {need.status}
-                            </span>
-                        </div>
-                    ))}
+                    {streams.length > 0 ? (
+                        streams.map((stream: any, idx: number) => (
+                            <div key={idx} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50/50">
+                                <span className="font-medium text-gray-700">{stream.stream_name}</span>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${stream.status === 'Done' ? 'bg-green-100 text-green-800' :
+                                        stream.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-red-100 text-red-800'
+                                    }`}>
+                                    {stream.status}
+                                </span>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-gray-500 italic">No needs assessment found.</p>
+                    )}
                 </div>
             </div>
 

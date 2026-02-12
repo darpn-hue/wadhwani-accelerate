@@ -44,8 +44,9 @@ npm run preview
 ## Project Structure
 
 - `src/components/ui`: Reusable UI components (e.g., Button).
-- `src/pages`: Page components (e.g., Welcome).
+- `src/pages`: Page components (e.g., Welcome, Committee Dashboard).
 - `src/App.tsx`: Main application component with routing.
+
 ## Database Setup (Supabase)
 
 This project requires a Supabase backend.
@@ -54,7 +55,23 @@ This project requires a Supabase backend.
 2. **Run the SQL Schema**:
    - Go to the SQL Editor in your Supabase dashboard.
    - Copy the contents of `supabase_schema.sql` from this repository.
-   - Run the script to create tables, security policies, and triggers.
+   - Run the script. This will create all necessary tables (including `ventures`, `venture_milestones`, `venture_streams`) and apply Row Level Security (RLS) policies.
+
+## Key Modules
+
+### 1. Venture Application & Dashboard
+- Entrepreneurs can sign up, create a profile, and submit a venture application.
+- `My Ventures` dashboard to track status.
+- **New**: `Venture Workbench` for accepted ventures to view milestones, streams, and support hours.
+
+### 2. Success Manager Dashboard (VSM)
+- Success Managers can view all applications, perform AI analysis, and triage ventures.
+- Uses `VSMDashboard.tsx` and `VentureDetails.tsx`.
+
+### 3. Committee Dashboard [NEW]
+- Committee members can review high-potential ventures.
+- AI-assisted agreement generation (`CommitteeDashboard.tsx`).
+- Approve/Reject workflows with automatic agreement status updates.
 
 ## Demo Accounts & Testing
 

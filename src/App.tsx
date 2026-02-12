@@ -11,6 +11,7 @@ import { AuthProvider } from './context/AuthContext';
 import { VSMDashboardLayout } from './layouts/VSMDashboardLayout';
 import { VSMDashboard } from './pages/VSMDashboard';
 import { CommitteeDashboard } from './pages/CommitteeDashboard';
+import { VentureWorkbench } from './pages/VentureWorkbench';
 
 const Header = () => (
   <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 w-full z-50">
@@ -58,6 +59,7 @@ function App() {
             <Route index element={<MyVentures />} />
             <Route path="new-application" element={<NewApplication />} />
             <Route path="venture/:id" element={<VentureDetails />} />
+            <Route path="venture/:id/workbench" element={<VentureWorkbench />} />
           </Route>
 
           {/* Success Manager Dashboard Routes */}

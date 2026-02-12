@@ -126,3 +126,120 @@ create policy "Staff can update any venture"
       and profiles.role in ('success_mgr', 'admin', 'committee_member')
     )
   );
+
+--------------------------------------------------------------------------------
+-- Phase 6: Venture Agreement & Workbench
+--------------------------------------------------------------------------------
+
+DO $$
+BEGIN
+    -- 1. Agreement Status (Draft, Sent, Signed)
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ventures' AND column_name = 'agreement_status') THEN
+        ALTER TABLE ventures ADD COLUMN agreement_status text DEFAULT 'Draft';
+    END IF;
+
+    -- 2. Agreement Sent Timestamp
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ventures' AND column_name = 'agreement_sent_at') THEN
+        ALTER TABLE ventures ADD COLUMN agreement_sent_at timestamptz;
+    END IF;
+
+    -- 3. Agreement Accepted Timestamp
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'ventures' AND column_name = 'agreement_accepted_at') THEN
+        ALTER TABLE ventures ADD COLUMN agreement_accepted_at timestamptz;
+    END IF;
+END $$;
+
+
+--------------------------------------------------------------------------------
+-- Phase 7: Production Schema Optimization
+--------------------------------------------------------------------------------
+
+-- 1. Programs (Lookup Table)
+CREATE TABLE IF NOT EXISTS programs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text NOT NULL UNIQUE,
+    description text,
+    created_at timestamptz DEFAULT now()
+);
+
+-- Seed Programs
+INSERT INTO programs (name, description) VALUES 
+('Accelerate Prime', 'For early stage ventures'),
+('Accelerate Core', 'For growth stage ventures'),
+('Accelerate Select', 'For mature ventures'),
+('Ignite', 'For idea stage'),
+('Liftoff', 'For launch stage')
+ON CONFLICT (name) DO NOTHING;
+
+-- 2. Venture Milestones
+CREATE TABLE IF NOT EXISTS venture_milestones (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    venture_id uuid REFERENCES ventures(id) ON DELETE CASCADE,
+    category text NOT NULL,
+    description text NOT NULL,
+    status text DEFAULT 'Pending',
+    due_date date,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- 3. Venture Streams
+CREATE TABLE IF NOT EXISTS venture_streams (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    venture_id uuid REFERENCES ventures(id) ON DELETE CASCADE,
+    stream_name text NOT NULL,
+    owner text,
+    status text DEFAULT 'On Track',
+    end_date text,
+    end_output text,
+    sprint_deliverable text,
+    created_at timestamptz DEFAULT now(),
+    updated_at timestamptz DEFAULT now()
+);
+
+-- 4. Support Hours
+CREATE TABLE IF NOT EXISTS support_hours (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    venture_id uuid REFERENCES ventures(id) ON DELETE CASCADE,
+    allocated numeric DEFAULT 0,
+    used numeric DEFAULT 0,
+    balance numeric GENERATED ALWAYS AS (allocated - used) STORED,
+    last_updated_at timestamptz DEFAULT now()
+);
+
+-- 5. Venture History
+CREATE TABLE IF NOT EXISTS venture_history (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    venture_id uuid REFERENCES ventures(id) ON DELETE CASCADE,
+    previous_status text,
+    new_status text,
+    changed_by uuid REFERENCES auth.users(id),
+    changed_at timestamptz DEFAULT now(),
+    notes text
+);
+
+-- Enable RLS
+ALTER TABLE venture_milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE venture_streams ENABLE ROW LEVEL SECURITY;
+ALTER TABLE support_hours ENABLE ROW LEVEL SECURITY;
+ALTER TABLE venture_history ENABLE ROW LEVEL SECURITY;
+
+-- Policies for Phase 7 Tables
+
+-- Milestones
+CREATE POLICY "Users view own milestones" ON venture_milestones FOR SELECT USING (EXISTS (SELECT 1 FROM ventures WHERE id = venture_milestones.venture_id AND user_id = auth.uid()));
+CREATE POLICY "Staff view all milestones" ON venture_milestones FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('success_mgr', 'admin', 'committee_member')));
+CREATE POLICY "Staff manage milestones" ON venture_milestones FOR ALL USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('success_mgr', 'admin', 'committee_member')));
+
+-- Streams
+CREATE POLICY "Users view own streams" ON venture_streams FOR SELECT USING (EXISTS (SELECT 1 FROM ventures WHERE id = venture_streams.venture_id AND user_id = auth.uid()));
+CREATE POLICY "Staff view all streams" ON venture_streams FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('success_mgr', 'admin', 'committee_member')));
+CREATE POLICY "Users can insert own streams" ON venture_streams FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM ventures WHERE id = venture_streams.venture_id AND user_id = auth.uid()));
+CREATE POLICY "Users can update own streams" ON venture_streams FOR UPDATE USING (EXISTS (SELECT 1 FROM ventures WHERE id = venture_streams.venture_id AND user_id = auth.uid()));
+
+
+-- Support Hours
+CREATE POLICY "Users view own support_hours" ON support_hours FOR SELECT USING (EXISTS (SELECT 1 FROM ventures WHERE id = support_hours.venture_id AND user_id = auth.uid()));
+CREATE POLICY "Staff view all support_hours" ON support_hours FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('success_mgr', 'admin', 'committee_member')));
+CREATE POLICY "Users can insert own support hours" ON support_hours FOR INSERT WITH CHECK (EXISTS (SELECT 1 FROM ventures WHERE id = support_hours.venture_id AND user_id = auth.uid()));
+

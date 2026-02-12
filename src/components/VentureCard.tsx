@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, LayoutGrid } from 'lucide-react';
+import { Eye, LayoutGrid, FileText } from 'lucide-react';
 import { Button } from './ui/Button';
 
 export interface Venture {
@@ -11,6 +11,7 @@ export interface Venture {
     program: 'Accelerate' | 'Ignite' | 'Liftoff';
     location: string;
     submittedAt: string;
+    agreement_status?: 'Draft' | 'Sent' | 'Signed';
 }
 
 interface VentureCardProps {
@@ -51,13 +52,31 @@ export const VentureCard: React.FC<VentureCardProps> = ({ venture }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-50">
-                <Button
-                    className="bg-blue-600 hover:bg-blue-700 text-white border-none"
-                    onClick={() => navigate(`/dashboard/venture/${venture.id}/workbench`)}
-                >
-                    <LayoutGrid className="w-4 h-4 mr-2" />
-                    Workbench
-                </Button>
+                {venture.agreement_status === 'Draft' || !venture.agreement_status ? (
+                    <Button
+                        className="bg-gray-100 text-gray-400 cursor-not-allowed border-none"
+                        disabled
+                    >
+                        <LayoutGrid className="w-4 h-4 mr-2" />
+                        Workbench Locked
+                    </Button>
+                ) : venture.agreement_status === 'Sent' ? (
+                    <Button
+                        className="bg-blue-600 hover:bg-blue-700 text-white border-none animate-pulse"
+                        onClick={() => navigate(`/dashboard/venture/${venture.id}/workbench`)}
+                    >
+                        <FileText className="w-4 h-4 mr-2" />
+                        Review Agreement
+                    </Button>
+                ) : (
+                    <Button
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white border-none"
+                        onClick={() => navigate(`/dashboard/venture/${venture.id}/workbench`)}
+                    >
+                        <LayoutGrid className="w-4 h-4 mr-2" />
+                        Launch Workbench
+                    </Button>
+                )}
                 <Button
                     variant="outline"
                     onClick={() => navigate(`/dashboard/venture/${venture.id}`)}

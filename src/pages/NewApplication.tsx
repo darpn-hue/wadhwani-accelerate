@@ -84,7 +84,7 @@ export const NewApplication: React.FC = () => {
         setIsSubmitting(true);
 
         try {
-            const { error } = await supabase.from('ventures').insert({
+            const { data: venture, error } = await supabase.from('ventures').insert({
                 user_id: user.id,
                 name: formData.ventureName,
                 description: `${formData.currentProduct} • ${formData.newLocation || formData.currentLocation}`,
@@ -110,11 +110,40 @@ export const NewApplication: React.FC = () => {
                     investment: formData.investment,
                     teamSize: formData.teamSize,
                     progress: formData.progress
-                },
-                needs: formData.needs
-            });
+                }
+                // needs column removed - now in venture_streams
+            })
+                .select()
+                .single();
 
             if (error) throw error;
+
+            // 2. Insert Venture Streams (Needs)
+            // Map the needs array to the new table structure
+            const streamsToInsert = formData.needs.map(need => ({
+                venture_id: venture.id,
+                stream_name: need.stream,
+                status: need.status === 'Need Help' ? 'At Risk' : need.status === 'Work in Progress' ? 'Delayed' : 'On Track',
+                owner: 'Founder',
+                updated_at: new Date().toISOString()
+            }));
+
+            const { error: streamsError } = await supabase
+                .from('venture_streams')
+                .insert(streamsToInsert);
+
+            if (streamsError) throw streamsError;
+
+            // 3. Initialize Support Hours
+            const { error: hoursError } = await supabase
+                .from('support_hours')
+                .insert({
+                    venture_id: venture.id,
+                    allocated: 15,
+                    used: 0
+                });
+
+            if (hoursError) console.error("Error creating support hours:", hoursError);
             setIsSubmitted(true);
         } catch (err) {
             console.error('Error submitting application:', err);
