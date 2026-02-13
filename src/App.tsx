@@ -13,6 +13,12 @@ import { VSMDashboard } from './pages/VSMDashboard';
 import { CommitteeDashboard } from './pages/CommitteeDashboard';
 import { VentureWorkbench } from './pages/VentureWorkbench';
 
+/**
+ * Header Component
+ * 
+ * Displays the application branding and device layout controls (mocked).
+ * Visible on all protected pages.
+ */
 const Header = () => (
   <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 fixed top-0 w-full z-50">
     <div className="font-bold text-red-700 text-lg">Assisted Growth Platform</div>
@@ -27,6 +33,17 @@ const Header = () => (
   </header>
 );
 
+/**
+ * Main Application Component
+ * 
+ * Configures the global providers (AuthProvider, Router) and defines the route hierarchy.
+ * 
+ * Routes:
+ * - Public: /, /login, /signup
+ * - Entrepreneur: /dashboard/* (Guarded by DashboardLayout)
+ * - Success Manager: /vsm/dashboard/* (Guarded by VSMDashboardLayout)
+ * - Committee: /committee/dashboard/*
+ */
 function App() {
   return (
     <AuthProvider>
