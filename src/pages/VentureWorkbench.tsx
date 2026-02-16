@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, CheckCircle, FileText, Loader2, PenTool } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { StatusSelect } from '../components/StatusSelect';
 
 export const VentureWorkbench = () => {
     const { id } = useParams<{ id: string }>();
@@ -18,6 +19,26 @@ export const VentureWorkbench = () => {
     useEffect(() => {
         if (id) fetchVentureData();
     }, [id]);
+
+    const updateStreamStatus = async (streamId: string, newStatus: string) => {
+        try {
+            // Optimistic update
+            setStreams(prev => prev.map(s =>
+                s.id === streamId ? { ...s, status: newStatus } : s
+            ));
+
+            const { error } = await supabase
+                .from('venture_streams')
+                .update({ status: newStatus })
+                .eq('id', streamId);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('Failed to update status');
+            fetchVentureData();
+        }
+    };
 
     const fetchVentureData = async () => {
         try {
@@ -238,17 +259,24 @@ export const VentureWorkbench = () => {
                                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div className="bg-lime-100 text-lime-800 px-3 py-1 text-xs font-bold uppercase tracking-wider rounded">Business</div>
-                                        <span className="font-bold text-gray-900">{venture.name}</span>
+                                        <div>
+                                            <div className="font-bold text-gray-900">{venture.name}</div>
+                                            <div className="text-xs text-gray-500">{venture.city} • ₹{venture.revenue_12m}</div>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="bg-lime-100 text-lime-800 px-3 py-1 text-xs font-bold uppercase tracking-wider rounded">CEO</div>
                                         <span className="font-bold text-gray-900">Arun Kumar</span>
                                     </div>
                                 </div>
+
                                 <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <div className="bg-lime-400 text-lime-900 px-3 py-1 text-xs font-bold uppercase tracking-wider rounded">Venture</div>
-                                        <span className="font-bold text-gray-900">{venture.description}</span>
+                                        <div>
+                                            <div className="font-bold text-gray-900">{venture.growth_focus}</div>
+                                            <div className="text-xs text-gray-500">Target: ₹{venture.revenue_potential_3y}</div>
+                                        </div>
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <div className="bg-orange-600 text-white px-3 py-1 text-xs font-bold uppercase tracking-wider rounded">Partner</div>
@@ -298,11 +326,10 @@ export const VentureWorkbench = () => {
                                                     <td className="px-6 py-4 text-gray-600">{row.owner || 'Founder'}</td>
                                                     <td className="px-6 py-4 text-gray-600">{row.end_date || 'Oct 2025'}</td>
                                                     <td className="px-6 py-4">
-                                                        <span className={`px-2 py-1 rounded text-xs font-bold ${row.status === 'On Track' ? 'bg-green-100 text-green-700' :
-                                                            row.status === 'At Risk' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'
-                                                            }`}>
-                                                            {row.status}
-                                                        </span>
+                                                        <StatusSelect
+                                                            status={row.status}
+                                                            onChange={(newStatus) => updateStreamStatus(row.id, newStatus)}
+                                                        />
                                                     </td>
                                                     <td className="px-6 py-4 text-gray-500 italic">Marker for success</td>
                                                     <td className="px-6 py-4 text-gray-500 italic">Stream unblock</td>
@@ -346,6 +373,6 @@ export const VentureWorkbench = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };

@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Rocket, Mail, Lock, ArrowRight, Chrome, AlertCircle } from 'lucide-react';
+import { Rocket, Mail, Lock, ArrowRight, Chrome, AlertCircle, Briefcase, Users } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { supabase } from '../lib/supabase';
@@ -48,10 +49,8 @@ export const Login: React.FC = () => {
             }
 
             // Manual redirect if needed (though onAuthStateChange usually handles this app-wide)
-            if (email.includes('admin') || email.includes('manager')) {
+            if (email.includes('admin') || email.includes('manager') || email.includes('committee')) {
                 navigate('/vsm/dashboard');
-            } else if (email.includes('committee')) {
-                navigate('/committee/dashboard');
             } else {
                 navigate('/dashboard');
             }
@@ -86,6 +85,9 @@ export const Login: React.FC = () => {
         } else if (role === 'success_mgr') {
             demoEmail = 'meetul@admin.com';
             demoPassword = 'admin123';
+        } else if (role === 'venture_mgr') {
+            demoEmail = 'arun@admin.com';
+            demoPassword = 'admin123';
         } else if (role === 'committee') {
             demoEmail = 'committee@admin.com';
             demoPassword = 'admin123';
@@ -109,7 +111,7 @@ export const Login: React.FC = () => {
                         password: demoPassword,
                         options: {
                             data: {
-                                full_name: role === 'success_mgr' ? 'Demo Admin' : 'Demo Entrepreneur',
+                                full_name: role === 'success_mgr' ? 'Demo Screening Mgr' : role === 'venture_mgr' ? 'Demo Venture Mgr' : 'Demo Entrepreneur',
                             },
                         },
                     });
@@ -126,8 +128,7 @@ export const Login: React.FC = () => {
                 }
             }
             // Navigation handled by auth state change or manually here
-            if (role === 'success_mgr') navigate('/vsm/dashboard');
-            else if (role === 'committee') navigate('/committee/dashboard');
+            if (role === 'success_mgr' || role === 'venture_mgr' || role === 'committee') navigate('/vsm/dashboard');
             else navigate('/dashboard');
 
         } catch (err: any) {
@@ -227,20 +228,29 @@ export const Login: React.FC = () => {
                             onClick={() => handleDemoLogin('success_mgr')}
                             className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-red-600 hover:text-red-600 hover:bg-red-50 transition-all"
                         >
-                            Success Manager
+                            Screening Manager
                         </button>
+                        <button
+                            onClick={() => handleDemoLogin('venture_mgr')}
+                            className="w-full bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Briefcase className="w-4 h-4 text-purple-600" />
+                            Venture Manager
+                        </button>
+                        <button
+                            onClick={() => handleDemoLogin('committee')}
+                            className="w-full bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Users className="w-4 h-4 text-indigo-600" />
+                            Selection Committee
+                        </button>
+
                     </div>
 
-                    <button
-                        onClick={() => handleDemoLogin('committee')}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-indigo-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                    >
-                        Committee Member
-                    </button>
-
-                    <div className="text-center text-xs text-gray-400">
+                    <div className="text-center text-xs text-gray-400 space-y-1">
                         <div>Venture: rajesh@example.com / password</div>
-                        <div>Admin: meetul@admin.com / admin123</div>
+                        <div>Screening Mgr: meetul@admin.com / admin123</div>
+                        <div>Venture Mgr: arun@admin.com / admin123</div>
                         <div>Committee: committee@admin.com / admin123</div>
                     </div>
                 </div>

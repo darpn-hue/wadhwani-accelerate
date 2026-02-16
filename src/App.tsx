@@ -10,7 +10,7 @@ import { Monitor, RefreshCcw, Maximize2 } from 'lucide-react';
 import { AuthProvider } from './context/AuthContext';
 import { VSMDashboardLayout } from './layouts/VSMDashboardLayout';
 import { VSMDashboard } from './pages/VSMDashboard';
-import { CommitteeDashboard } from './pages/CommitteeDashboard';
+
 import { VentureWorkbench } from './pages/VentureWorkbench';
 
 /**
@@ -84,7 +84,7 @@ function App() {
             <Route index element={<VSMDashboard />} />
           </Route>
 
-          <Route path="/committee/dashboard" element={<CommitteeDashboard />} />
+
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

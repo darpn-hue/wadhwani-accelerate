@@ -16,7 +16,7 @@ export const VSMDashboardLayout: React.FC = () => {
     return (
         <div className="min-h-screen bg-gray-50 flex">
             {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-10">
+            <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-10 flex flex-col justify-between">
                 <div className="p-6">
                     <div className="flex items-center gap-2 text-red-900 font-bold text-xl mb-8">
                         <Rocket className="w-6 h-6 text-red-600" />
@@ -24,20 +24,20 @@ export const VSMDashboardLayout: React.FC = () => {
                     </div>
 
                     <nav className="space-y-1">
-                        <button className="w-full flex items-center gap-3 px-3 py-2 bg-red-50 text-red-700 rounded-lg font-medium">
+                        <button className="w-full flex items-center gap-3 px-3 py-2 bg-red-50 text-red-700 rounded-lg font-medium text-left">
                             <LayoutDashboard className="w-5 h-5" />
-                            Venture Success Manager Dashboard
+                            Screening Manager Dashboard
                         </button>
                     </nav>
                 </div>
 
-                <div className="absolute bottom-0 w-full p-6 border-t border-gray-100">
+                <div className="p-6 border-t border-gray-100">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-700 font-bold">
                             {user?.email?.[0].toUpperCase() || 'V'}
                         </div>
                         <div className="overflow-hidden">
-                            <div className="font-medium text-gray-900 truncate">Success Manager</div>
+                            <div className="font-medium text-gray-900 truncate">Screening Manager</div>
                             <div className="text-xs text-gray-500 truncate">{user?.email}</div>
                         </div>
                     </div>
@@ -56,11 +56,6 @@ export const VSMDashboardLayout: React.FC = () => {
 
             {/* Main Content */}
             <main className="flex-1 ml-64 p-8">
-                <header className="flex justify-between items-center mb-8">
-                    <h1 className="text-2xl font-bold text-gray-900">Venture Success Manager</h1>
-                    <div className="text-sm text-gray-500">Assisted Growth Platform</div>
-                </header>
-
                 <Outlet />
             </main>
         </div>

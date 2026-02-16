@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Info, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Info, Loader2, Mic } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
+import { StatusSelect } from '../components/StatusSelect';
+
 // Steps configuration
 const STEPS = [
-    { id: 1, title: 'Define Venture' },
-    { id: 2, title: 'Commitment' },
-    { id: 3, title: 'Needs' },
+    { id: 1, title: 'Business' },
+    { id: 2, title: 'Venture' },
+    { id: 3, title: 'Status' },
+    { id: 4, title: 'Support' }
 ];
 
-// Status Options for Step 3
-const STATUS_OPTIONS = ['Done', 'Work in Progress', 'Need Help'];
 const STREAMS = [
     'Money & Capital',
     'Product & Strategy',
@@ -23,6 +24,57 @@ const STREAMS = [
     'Go-To-Market',
     'Supply Chain'
 ];
+
+const STREAM_MILESTONES: Record<string, { title: string; description: string }[]> = {
+    'Product & Strategy': [
+        { title: 'Core API Specs', description: 'Technical specifications for public and internal endpoints.' },
+        { title: 'UI Design System', description: 'Global Figma library and component standards.' },
+        { title: 'V1.2 Integration', description: 'Middleware bridge for legacy data retrofitting.' },
+        { title: 'Infrastructure', description: 'Multi-region cloud deployment strategy.' },
+        { title: 'Unit Testing', description: 'Standardized QA suite for core services.' },
+        { title: 'Security Audit', description: 'Third-party penetration testing and compliance.' },
+    ],
+    'Go-To-Market': [
+        { title: 'ICP Definition', description: 'Detailed profile of high-value manufacturing clients.' },
+        { title: 'Distribution', description: 'Partner channel mapping and commission structures.' },
+        { title: 'Referral Program', description: 'Incentive model for existing customer advocacy.' },
+        { title: 'Partner Ecosystem', description: 'Integration directory for third-party providers.' },
+        { title: 'Pricing Strategy', description: 'Tiered subscription and volume discount model.' },
+        { title: 'Sales Launch', description: 'Regional enablement kit for direct sales teams.' },
+    ],
+    'Money & Capital': [
+        { title: 'Series A Pitch', description: 'Updated narrative for institutional growth rounds.' },
+        { title: 'Financial Metrics', description: 'Historical performance and 24-month projections.' },
+        { title: 'Data Room', description: 'Encrypted document repository for due diligence.' },
+        { title: 'Investor Outreach', description: 'CRM tracking for potential VC partners.' },
+        { title: 'Financial Model', description: 'Excel-based dynamic budget and burn calculator.' },
+        { title: 'Exit Strategy', description: 'M&A landscape analysis and valuation benchmarks.' },
+    ],
+    'Supply Chain': [
+        { title: 'Lead Time Gap', description: 'Analysis of hardware delays vs scaling targets.' },
+        { title: 'Vendor Review', description: 'Quarterly performance scorecard for key suppliers.' },
+        { title: 'Inventory Forecast', description: 'AI-driven predictive stock requirements.' },
+        { title: 'Logistics Audit', description: 'Freight cost optimization and route analysis.' },
+        { title: 'Compliance Review', description: 'Regulatory certification status for global trade.' },
+        { title: 'Safety Stock', description: 'Buffering strategy for mission-critical components.' },
+    ],
+    'Operations': [
+        { title: 'ERP Integration', description: 'Centralized management of ops and finance.' },
+        { title: 'Team Training', description: 'Internal platform for onboarding new staff.' },
+        { title: 'Automation', description: 'Standardization of routine warehouse tasks.' },
+        { title: 'Office Expansion', description: 'Real estate planning for the EMEA headquarters.' },
+        { title: 'Compliance Audit', description: 'Internal review of data privacy and safety.' },
+        { title: 'Disaster Recovery', description: 'Backup protocols and emergency business plan.' },
+    ],
+    'People & Team': [
+        { title: 'Hiring Handbook', description: 'Standardized interview and offer procedures.' },
+        { title: 'Appraisal Framework', description: 'Semi-annual performance review methodology.' },
+        { title: 'Individual Metrics', description: 'KPI dashboards for all department leads.' },
+        { title: 'Equity Program', description: 'Option pool allocation and vesting schedules.' },
+        { title: 'Culture Workshop', description: 'Mission alignment for remote global teams.' },
+        { title: 'Benefits Overhaul', description: 'Comparison study of regional health plans.' },
+    ],
+};
 
 export const NewApplication: React.FC = () => {
     const navigate = useNavigate();
@@ -33,29 +85,32 @@ export const NewApplication: React.FC = () => {
 
     // Form State
     const [formData, setFormData] = useState({
-        // Step 1
+        // Step 1: Business
         ventureName: '',
         founderName: '',
-        currentProduct: '',
-        currentCustomers: '',
-        currentLocation: '',
+        whatDoYouSell: '',
+        whoDoYouSellTo: '',
+        regionsCovered: '',
+        city: '',
         currentRevenue: '',
+        teamSize: '', // Moved from Step 2 to Step 1
 
-        industry: '',
-
-        newProduct: '',
-        newSegment: '',
-        newLocation: '',
-        businessModel: '',
-        expectedRevenue: '',
-
-        // Step 2
+        // Step 2: Venture
+        growthFocus: '', // New field: Product, Segment, Geography
+        revenuePotential: '', // New field: revenue_potential_3y
         investment: '',
-        teamSize: '',
-        progress: '',
+        incrementalHiring: '', // New field: incremental_hiring
+        // Detailed breakdowns for each focus area
+        focusProduct: '',
+        focusSegment: '',
+        focusGeography: '',
 
-        // Step 3
-        needs: STREAMS.map(s => ({ stream: s, status: 'Need Help' }))
+        // Step 3: Status
+        needs: STREAMS.map(s => ({ stream: s, status: 'No help needed' })), // Default updated
+        blockers: '', // New field
+
+        // Step 4: Support
+        supportRequest: '' // New field
     });
 
     const updateField = (field: string, value: any) => {
@@ -65,12 +120,12 @@ export const NewApplication: React.FC = () => {
     const updateNeedStatus = (streamIndex: number, status: string) => {
         const newNeeds = [...formData.needs];
 
-        // Check constraint if selecting "Need Help"
-        if (status === 'Need Help') {
-            const currentNeedHelpCount = newNeeds.filter(n => n.status === 'Need Help').length;
-            // If we are changing TO 'Need Help' and we already have 3 (and this one isn't currently 'Need Help')
-            if (currentNeedHelpCount >= 3 && newNeeds[streamIndex].status !== 'Need Help') {
-                alert('You can only select up to 3 "Need Help" items.');
+        // Check constraint if selecting "Need deep support"
+        if (status === 'Need deep support') {
+            const currentNeedHelpCount = newNeeds.filter(n => n.status === 'Need deep support').length;
+            // If we are changing TO 'Need deep support' and we already have 3 (and this one isn't currently it)
+            if (currentNeedHelpCount >= 3 && newNeeds[streamIndex].status !== 'Need deep support') {
+                alert('You can only select up to 3 "Need deep support" items.');
                 return;
             }
         }
@@ -87,31 +142,38 @@ export const NewApplication: React.FC = () => {
             const { data: venture, error } = await supabase.from('ventures').insert({
                 user_id: user.id,
                 name: formData.ventureName,
-                description: `${formData.currentProduct} • ${formData.newLocation || formData.currentLocation}`,
-                location: formData.currentLocation,
+                description: `${formData.whatDoYouSell} • ${formData.whoDoYouSellTo}`,
+                location: formData.regionsCovered,
+                city: formData.city, // New mapped field
+                revenue_12m: formData.currentRevenue, // New mapped field
+                full_time_employees: formData.teamSize, // New mapped field
                 program: 'Accelerate', // Default assignment logic
                 status: 'Submitted',
 
+                growth_focus: formData.growthFocus, // New mapped field
+                revenue_potential_3y: formData.revenuePotential, // New mapped field
+                min_investment: formData.investment, // New mapped field
+                incremental_hiring: formData.incrementalHiring, // New mapped field
+
+                blockers: formData.blockers, // New mapped field
+                support_request: formData.supportRequest, // New mapped field
+
                 growth_current: {
-                    industry: formData.industry,
-                    product: formData.currentProduct,
-                    segment: formData.currentCustomers,
-                    geography: formData.currentLocation,
-                    revenue: formData.currentRevenue,
-                    business_model: formData.businessModel
+                    // Storing structured data in JSONB as backup/searchable extras
+                    product: formData.whatDoYouSell,
+                    segment: formData.whoDoYouSellTo,
+                    geography: formData.regionsCovered,
                 },
                 growth_target: {
-                    product: formData.newProduct,
-                    segment: formData.newSegment,
-                    geography: formData.newLocation,
-                    revenue: formData.expectedRevenue
-                },
+                    product: formData.focusProduct,
+                    segment: formData.focusSegment,
+                    geography: formData.focusGeography
+                }, // Storing details for all potential growth areas
                 commitment: {
+                    // Keeping legacy structure for compatibility if needed, but main data is now in columns
                     investment: formData.investment,
-                    teamSize: formData.teamSize,
-                    progress: formData.progress
+                    teamSize: formData.teamSize
                 }
-                // needs column removed - now in venture_streams
             })
                 .select()
                 .single();
@@ -123,7 +185,7 @@ export const NewApplication: React.FC = () => {
             const streamsToInsert = formData.needs.map(need => ({
                 venture_id: venture.id,
                 stream_name: need.stream,
-                status: need.status === 'Need Help' ? 'At Risk' : need.status === 'Work in Progress' ? 'Delayed' : 'On Track',
+                status: need.status, // Directly store the string from StatusSelect
                 owner: 'Founder',
                 updated_at: new Date().toISOString()
             }));
@@ -154,7 +216,7 @@ export const NewApplication: React.FC = () => {
     };
 
     const handleNext = () => {
-        if (currentStep < 3) {
+        if (currentStep < 4) {
             setCurrentStep(prev => prev + 1);
         } else {
             handleSubmit();
@@ -254,52 +316,72 @@ export const NewApplication: React.FC = () => {
                                 />
                             </div>
 
+                            {/* Industry Field Removed as per new requirement */}
+
+
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">WHAT DO YOU SELL?</span>
+                                    <div className="relative">
+                                        <textarea
+                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                                            placeholder="Describe your current products and services..."
+                                            value={formData.whatDoYouSell}
+                                            onChange={(e) => updateField('whatDoYouSell', e.target.value)}
+                                        />
+                                        <Mic className="absolute top-3 right-3 w-4 h-4 text-gray-400" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">WHO DO YOU SELL TO?</span>
+                                    <div className="relative">
+                                        <textarea
+                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                                            placeholder="Describe your customer segments..."
+                                            value={formData.whoDoYouSellTo}
+                                            onChange={(e) => updateField('whoDoYouSellTo', e.target.value)}
+                                        />
+                                        <Mic className="absolute top-3 right-3 w-4 h-4 text-gray-400" />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">WHICH REGIONS DO YOU SELL TO?</span>
+                                    <div className="relative">
+                                        <textarea
+                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                                            placeholder="Describe the geographies and regions you cover..."
+                                            value={formData.regionsCovered}
+                                            onChange={(e) => updateField('regionsCovered', e.target.value)}
+                                        />
+                                        <Mic className="absolute top-3 right-3 w-4 h-4 text-gray-400" />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-2 gap-6">
                                 <Input
-                                    label="Industry *"
-                                    placeholder="e.g. Agri-Tech"
-                                    value={formData.industry}
-                                    onChange={(e) => updateField('industry', e.target.value)}
+                                    label="City of Operation"
+                                    placeholder="e.g. Ludhiana"
+                                    value={formData.city}
+                                    onChange={(e) => updateField('city', e.target.value)}
+                                />
+                                <Input
+                                    label="Revenue in Last 12 Months"
+                                    placeholder="e.g. 2 Crores"
+                                    value={formData.currentRevenue}
+                                    onChange={(e) => updateField('currentRevenue', e.target.value)}
                                 />
                             </div>
 
-                            <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-3 text-sm text-blue-700">
-                                <Info className="w-5 h-5 flex-shrink-0 mt-0.5" />
-                                <span>Change at least one of the 3 dimensions below (Product, Segment, Geo) to qualify as a "Growth Venture".</span>
-                            </div>
-
                             <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-4">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Current State</span>
-                                    <Input placeholder="Product" value={formData.currentProduct} onChange={(e) => updateField('currentProduct', e.target.value)} />
-                                    <Input placeholder="Customer Segmentation" value={formData.currentCustomers} onChange={(e) => updateField('currentCustomers', e.target.value)} />
-                                    <Input placeholder="Geo Location" value={formData.currentLocation} onChange={(e) => updateField('currentLocation', e.target.value)} />
-                                </div>
-                                <div className="space-y-4">
-                                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">New / Target State</span>
-                                    <Input placeholder="Product" value={formData.newProduct} onChange={(e) => updateField('newProduct', e.target.value)} />
-                                    <Input placeholder="Customer Segmentation" value={formData.newSegment} onChange={(e) => updateField('newSegment', e.target.value)} />
-                                    <Input placeholder="Geo Location" value={formData.newLocation} onChange={(e) => updateField('newLocation', e.target.value)} />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-6">
-                                <Input label="Current Annual Revenue" placeholder="e.g. 2 Crores" value={formData.currentRevenue} onChange={(e) => updateField('currentRevenue', e.target.value)} />
-                                <Input label="Business Model" placeholder="How do you make money?" value={formData.businessModel} onChange={(e) => updateField('businessModel', e.target.value)} />
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="block text-sm font-medium text-gray-700">Expected Incremental Revenue (Year 3)</label>
-                                <select
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                                    value={formData.expectedRevenue}
-                                    onChange={(e) => updateField('expectedRevenue', e.target.value)}
-                                >
-                                    <option value="">Select Size</option>
-                                    <option value="1Cr - 5Cr">1Cr - 5Cr</option>
-                                    <option value="5Cr - 10Cr">5Cr - 10Cr</option>
-                                    <option value="10Cr+">10Cr+</option>
-                                </select>
+                                <Input
+                                    label="Number of Full-Time Employees"
+                                    placeholder="e.g. 15"
+                                    value={formData.teamSize}
+                                    onChange={(e) => updateField('teamSize', e.target.value)}
+                                />
                             </div>
                         </>
                     )}
@@ -307,33 +389,91 @@ export const NewApplication: React.FC = () => {
                     {currentStep === 2 && (
                         <>
                             <div className="space-y-4">
-                                <h2 className="text-2xl font-bold text-gray-900">Show Commitment</h2>
-                                <p className="text-gray-500">We invest in those who invest in themselves.</p>
+                                <h2 className="text-2xl font-bold text-gray-900">Venture Details</h2>
+                                <p className="text-gray-500">Tell us about your growth plans and investment potential.</p>
                             </div>
 
                             <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-gray-700">Growth Venture Focus</label>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        {['New Product', 'New Segment', 'New Geography'].map((focus) => (
+                                            <button
+                                                key={focus}
+                                                type="button"
+                                                onClick={() => updateField('growthFocus', focus)}
+                                                className={`px-4 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${formData.growthFocus === focus
+                                                    ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2'
+                                                    : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
+                                                    }`}
+                                            >
+                                                {focus}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-6 mt-6">
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">DESCRIBE THE NEW PRODUCT/SERVICE</span>
+                                                <Mic className="w-4 h-4 text-gray-300" />
+                                            </div>
+                                            <textarea
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] transition-shadow"
+                                                placeholder="Detail the technical or service innovation..."
+                                                value={formData.focusProduct}
+                                                onChange={(e) => updateField('focusProduct', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">DESCRIBE THE TARGET SEGMENT</span>
+                                                <Mic className="w-4 h-4 text-gray-300" />
+                                            </div>
+                                            <textarea
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] transition-shadow"
+                                                placeholder="Who is the ideal customer for this expansion?"
+                                                value={formData.focusSegment}
+                                                onChange={(e) => updateField('focusSegment', e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">DESCRIBE THE TARGET GEOGRAPHY</span>
+                                                <Mic className="w-4 h-4 text-gray-300" />
+                                            </div>
+                                            <textarea
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] transition-shadow"
+                                                placeholder="List the specific regions or countries..."
+                                                value={formData.focusGeography}
+                                                onChange={(e) => updateField('focusGeography', e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <Input
-                                    label="How much capital are you willing to invest?"
+                                    label="Projected Revenue by End of Year 3"
+                                    placeholder="e.g. 10 Crores"
+                                    value={formData.revenuePotential}
+                                    onChange={(e) => updateField('revenuePotential', e.target.value)}
+                                />
+
+                                <Input
+                                    label="Minimum Investment Amount"
                                     placeholder="e.g. 50 Lakhs"
                                     value={formData.investment}
                                     onChange={(e) => updateField('investment', e.target.value)}
                                 />
-                                <Input
-                                    label="How many full-time people will you dedicate?"
-                                    placeholder="e.g. 5 people"
-                                    value={formData.teamSize}
-                                    onChange={(e) => updateField('teamSize', e.target.value)}
-                                />
 
-                                <div className="space-y-1">
-                                    <label className="block text-sm font-medium text-gray-700">What have you done so far?</label>
-                                    <textarea
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 h-32"
-                                        placeholder="Describe pilots, prototypes, or contracts..."
-                                        value={formData.progress}
-                                        onChange={(e) => updateField('progress', e.target.value)}
-                                    />
-                                </div>
+                                <Input
+                                    label="Incremental Hiring Expectation"
+                                    placeholder="e.g. 5 new roles"
+                                    value={formData.incrementalHiring}
+                                    onChange={(e) => updateField('incrementalHiring', e.target.value)}
+                                />
                             </div>
                         </>
                     )}
@@ -346,30 +486,77 @@ export const NewApplication: React.FC = () => {
                                     <p className="text-gray-500">For each stream, indicate the current status.</p>
                                 </div>
                                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                                    We will be able to support you with 3 of the options below. So please select "Need Help" for only 3 items based on your needs and priority.
+                                    We will be able to provide deep hands-on support for 3 of the options below. Please select <strong>"Need deep support"</strong> for your top 3 priorities.
                                 </div>
                             </div>
 
                             <div className="space-y-2">
                                 {STREAMS.map((stream, idx) => (
-                                    <div key={stream} className="flex items-center justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50">
-                                        <span className="font-medium text-gray-900">{stream}</span>
-                                        <div className="flex gap-2">
-                                            {STATUS_OPTIONS.map((status) => (
-                                                <button
-                                                    key={status}
-                                                    onClick={() => updateNeedStatus(idx, status)}
-                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${formData.needs[idx].status === status
-                                                        ? 'bg-red-50 border-red-500 text-red-700'
-                                                        : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                                                        }`}
-                                                >
-                                                    {status}
-                                                </button>
-                                            ))}
+                                    <div key={stream} className="flex items-start justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center gap-2 group relative">
+                                            <span className="font-medium text-gray-900">{stream}</span>
+                                            <Info className="w-4 h-4 text-gray-400 cursor-help" />
+
+                                            {/* Tooltip */}
+                                            <div className="absolute left-0 bottom-full mb-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 p-4 hidden group-hover:block z-20 animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 pb-2 border-b border-gray-100">
+                                                    {stream} Milestones
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {STREAM_MILESTONES[stream]?.map((milestone, i) => (
+                                                        <div key={i} className="flex gap-2">
+                                                            <div className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-blue-500`} />
+                                                            <div>
+                                                                <div className="text-xs font-bold text-gray-900">{milestone.title}</div>
+                                                                <div className="text-[10px] text-gray-500 leading-tight">{milestone.description}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {/* Arrow */}
+                                                <div className="absolute left-4 top-full w-3 h-3 bg-white border-b border-r border-gray-100 transform rotate-45 -mt-1.5"></div>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-[200px]">
+                                            <StatusSelect
+                                                status={formData.needs[idx].status}
+                                                onChange={(newStatus) => updateNeedStatus(idx, newStatus)}
+                                            />
                                         </div>
                                     </div>
                                 ))}
+
+                                <div className="pt-4 space-y-2">
+                                    <h3 className="text-sm font-medium text-gray-700">Any specific blockers?</h3>
+                                    <textarea
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[80px]"
+                                        placeholder="Describe any immediate obstacles..."
+                                        value={formData.blockers}
+                                        onChange={(e) => updateField('blockers', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
+                    {currentStep === 4 && (
+                        <>
+                            <div className="space-y-4">
+                                <h2 className="text-2xl font-bold text-gray-900">Support Request</h2>
+                                <p className="text-gray-500">How can the foundation specifically help you?</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-gray-700">Detailed Support Needed</label>
+                                    <textarea
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[200px]"
+                                        placeholder="Please elaborate on the specific support you are requesting from the foundation..."
+                                        value={formData.supportRequest}
+                                        onChange={(e) => updateField('supportRequest', e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </>
                     )}
@@ -395,8 +582,8 @@ export const NewApplication: React.FC = () => {
                             </>
                         ) : (
                             <>
-                                {currentStep === 3 ? 'Submit Application' : 'Next'}
-                                {currentStep !== 3 && <ArrowRight className="w-4 h-4 ml-2" />}
+                                {currentStep === 4 ? 'Submit Application' : 'Next'}
+                                {currentStep !== 4 && <ArrowRight className="w-4 h-4 ml-2" />}
                             </>
                         )}
                     </Button>

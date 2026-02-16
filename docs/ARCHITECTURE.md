@@ -64,4 +64,28 @@ graph TD
 | **BaaS vs Custom Backend** | Supabase | Speed to market, built-in Auth/DB/Realtime, reduced DevOps overhead. |
 | **CSS Framework** | Tailwind | Rapid UI development, consistent design system tokens. |
 | **Type System** | TypeScript | Prevents runtime errors, improves developer experience with autocomplete. |
-| **Route Protection** | Wrapper Comp | ProtectedRoute component checks auth status before rendering child routes. |
+| **Route Protection** | Wrapper Comp | ProtectedRoute component checks auth status before reason child routes. |
+
+## 🔮 Future Architecture Evolution
+
+While the current Supabase-centric architecture provides rapid development and scalability, future requirements may necessitate a dedicated backend layer.
+
+### Transition to Node.js Backend
+
+As the platform grows, we may introduce a **Node.js / Express / NestJS** service between the Client and the Database.
+
+#### Triggers for Migration
+1.  **Complex Business Logic**: If validation or processing logic exceeds what is comfortable in RLS policies or Database Functions.
+2.  **Third-Party Integrations**: Need to securely handle webhooks (e.g., Stripe, sophisticated AI providers) or detailed logging/auditing.
+3.  **Rate Limiting & Caching**: Custom API gateway requirements for high-traffic scenarios.
+
+#### Proposed Hybrid Architecture
+-   **Auth**: Continue using Supabase Auth (GoTrue).
+-   **Data Access**:
+    -   *Reads*: Client can still read public/safe data directly via Supabase for performance.
+    -   *Writes*: Sensitive mutations routed through Node.js API.
+-   **Migration Strategy**:
+    1.  Maintain the current database schema.
+    2.  Disable RLS write policies for client roles.
+    3.  Create API endpoints that perform the logic and write to DB using a `service_role` key.
+
