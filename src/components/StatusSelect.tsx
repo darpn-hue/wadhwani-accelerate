@@ -1,22 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Circle, CheckCircle2, Zap, ShieldAlert, ChevronDown, Loader2 } from 'lucide-react';
 
-export type StreamStatus = 'No help needed' | 'Working on it' | 'Need guidance' | 'Need deep support';
+export type StreamStatus = 'Not started' | 'On track' | 'Need some advice' | 'Need deep support' | 'Completed';
 
 const STATUS_CONFIG: Record<string, { icon: any, color: string, bg: string, border: string }> = {
-    'No help needed': {
-        icon: CheckCircle2,
+    'Not started': {
+        icon: Circle,
         color: 'text-gray-400',
         bg: 'bg-gray-50',
         border: 'border-gray-200'
     },
-    'Working on it': {
-        icon: Circle,
-        color: 'text-blue-600',
-        bg: 'bg-blue-50',
-        border: 'border-blue-200'
+    'On track': {
+        icon: CheckCircle2,
+        color: 'text-green-600',
+        bg: 'bg-green-50',
+        border: 'border-green-200'
     },
-    'Need guidance': {
+    'Need some advice': {
         icon: Zap,
         color: 'text-amber-500',
         bg: 'bg-amber-50',
@@ -28,19 +28,20 @@ const STATUS_CONFIG: Record<string, { icon: any, color: string, bg: string, bord
         bg: 'bg-red-50',
         border: 'border-red-200'
     },
-    // Keep 'Completed' for backward compatibility or future use if needed, but not requested for new flow.
-    // User requested: No help needed, Working on it, Need guidance, Need deep support.
-    // Mapping existing statuses where possible to avoid breakage.
+    'Completed': {
+        icon: CheckCircle2,
+        color: 'text-blue-600',
+        bg: 'bg-blue-50',
+        border: 'border-blue-200'
+    }
 };
 
 const LEGACY_MAPPING: Record<string, string> = {
-    'On Track': 'Working on it',
-    'Not started': 'No help needed',
-    'Delayed': 'Need guidance',
+    'No help needed': 'On track',
+    'Working on it': 'On track',
+    'Need guidance': 'Need some advice',
     'At Risk': 'Need deep support',
-    'Work in Progress': 'Working on it',
-    'Done': 'No help needed',
-    'Completed': 'No help needed'
+    'Done': 'Completed'
 };
 
 interface StatusSelectProps {

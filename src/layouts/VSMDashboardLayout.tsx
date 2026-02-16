@@ -13,6 +13,17 @@ export const VSMDashboardLayout: React.FC = () => {
         }
     }, [user, loading, navigate]);
 
+    // Determine Role Label
+    const getRoleLabel = () => {
+        if (!user?.email) return 'Screening Manager';
+        if (user.email.includes('arun')) return 'Venture Manager';
+        if (user.email.includes('committee')) return 'Selection Committee';
+        return 'Screening Manager';
+    };
+
+    const roleLabel = getRoleLabel();
+    const dashboardLabel = roleLabel === 'Selection Committee' ? 'Committee Dashboard' : `${roleLabel} Dashboard`;
+
     return (
         <div className="min-h-screen bg-gray-50 flex">
             {/* Sidebar */}
@@ -26,7 +37,7 @@ export const VSMDashboardLayout: React.FC = () => {
                     <nav className="space-y-1">
                         <button className="w-full flex items-center gap-3 px-3 py-2 bg-red-50 text-red-700 rounded-lg font-medium text-left">
                             <LayoutDashboard className="w-5 h-5" />
-                            Screening Manager Dashboard
+                            {dashboardLabel}
                         </button>
                     </nav>
                 </div>
@@ -37,7 +48,7 @@ export const VSMDashboardLayout: React.FC = () => {
                             {user?.email?.[0].toUpperCase() || 'V'}
                         </div>
                         <div className="overflow-hidden">
-                            <div className="font-medium text-gray-900 truncate">Screening Manager</div>
+                            <div className="font-medium text-gray-900 truncate">{roleLabel}</div>
                             <div className="text-xs text-gray-500 truncate">{user?.email}</div>
                         </div>
                     </div>

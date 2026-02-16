@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Sparkles, LayoutDashboard, Users, TrendingUp, DollarSign, Target, Briefcase, Building2, Lock, Unlock, AlertCircle, FileText, Send, CheckCircle, Edit3, X, Save, Calendar, UserPlus } from 'lucide-react';
+import { Sparkles, LayoutDashboard, Users, TrendingUp, DollarSign, Target, Briefcase, Building2, FileText, Send, CheckCircle, Edit3, X, Save, UserPlus } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { StatusSelect } from '../components/StatusSelect';
 
 // Types
+interface DeliverableItem {
+    title: string;
+    description: string;
+    status: 'green' | 'orange' | 'red' | 'gray' | 'blue';
+}
+
 interface Venture {
     id: string;
     name: string;
@@ -23,7 +30,7 @@ interface Venture {
     status: string;
     program_recommendation?: string;
     agreement_status?: string; // 'Sent', 'Signed', etc.
-    agreement_milestones?: any; // { stream: [items] }
+    agreement_milestones?: Record<string, DeliverableItem[]>; // Updated type
     venture_partner?: string; // New for Phase 15
     created_at: string;
     // VSM Fields
@@ -41,6 +48,57 @@ const VENTURE_PARTNERS = [
     'Priya (SaaS)'
 ];
 
+const MOCK_DELIVERABLES: Record<string, DeliverableItem[]> = {
+    'Product': [
+        { title: 'Core API Specs', description: 'Technical specifications for public and internal endpoints.', status: 'green' },
+        { title: 'UI Design System', description: 'Global typography and component standards.', status: 'green' },
+        { title: 'V1.2 Integration', description: 'Deployment of legacy data retrofitting.', status: 'orange' },
+        { title: 'Infrastructure', description: 'Multi-region cloud deployment strategy.', status: 'red' },
+        { title: 'Unit Testing', description: 'Standardized QA suite for core services.', status: 'green' },
+        { title: 'Security Audit', description: 'Third-party penetration testing and compliance.', status: 'gray' }
+    ],
+    'GTM': [
+        { title: 'ICP Definition', description: 'Detailed profile of high-value manufacturing clients.', status: 'green' },
+        { title: 'Distribution', description: 'Partner channel mapping and commission structures.', status: 'green' },
+        { title: 'Referral Program', description: 'Incentivized advocacy and customer advocacy.', status: 'orange' },
+        { title: 'Partner Ecosystem', description: 'Integration directory for third-party providers.', status: 'green' },
+        { title: 'Pricing Strategy', description: 'Tiered subscription and volume discount model.', status: 'blue' },
+        { title: 'Sales Launch', description: 'Regional enablement kit for direct sales teams.', status: 'green' }
+    ],
+    'Funding': [
+        { title: 'Series A Pitch', description: 'Upscaled narrative for institutional growth rounds.', status: 'red' },
+        { title: 'Financial Metrics', description: 'Historical performance and 24-month projections.', status: 'orange' },
+        { title: 'Data Room', description: 'Document repository for due diligence.', status: 'green' },
+        { title: 'Investor Outreach', description: 'CRM tracking for potential VC partners.', status: 'green' },
+        { title: 'Financial Model', description: 'Excel-based dynamic budget and burn calculator.', status: 'green' },
+        { title: 'Exit Strategy', description: 'M&A landscape analysis and valuation benchmarks.', status: 'gray' }
+    ],
+    'Supply Chain': [
+        { title: 'Lead Time Gap', description: 'Analysis of hardware delays vs scaling targets.', status: 'red' },
+        { title: 'Vendor Review', description: 'Quarterly performance scorecard for key suppliers.', status: 'orange' },
+        { title: 'Inventory Forecast', description: 'AI-driven predictive stock requirements.', status: 'green' },
+        { title: 'Logistics Audit', description: 'Freight cost optimization and route analysis.', status: 'green' },
+        { title: 'Compliance Review', description: 'Regulatory certification status for global trade.', status: 'green' },
+        { title: 'Safety Stock', description: 'Buffering strategy for mission-critical components.', status: 'gray' }
+    ],
+    'Operations': [
+        { title: 'ERP Integration', description: 'Centralized management of ops and finance.', status: 'green' },
+        { title: 'Team Training', description: 'Internal platform for onboarding new staff.', status: 'green' },
+        { title: 'Automation', description: 'Standardization of routine warehouse tasks.', status: 'orange' },
+        { title: 'Office Expansion', description: 'Real estate planning for the EMEA headquarters.', status: 'green' },
+        { title: 'Compliance Audit', description: 'Internal review of data privacy and safety.', status: 'green' },
+        { title: 'Disaster Recovery', description: 'Backup protocols and emergency business plan.', status: 'green' }
+    ],
+    'Team': [
+        { title: 'Hiring Handbook', description: 'Standardized offer procedures.', status: 'green' },
+        { title: 'Appraisal Framework', description: 'Semi-annual performance review methodology.', status: 'orange' },
+        { title: 'Individual Metrics', description: 'KPI dashboards for department leads.', status: 'green' },
+        { title: 'Equity Program', description: 'Option pool allocation and vesting schedules.', status: 'green' },
+        { title: 'Culture Workshop', description: 'Mission alignment for remote global teams.', status: 'green' },
+        { title: 'Benefits Overhaul', description: 'Comparison study of regional health plans.', status: 'gray' }
+    ]
+};
+
 export const VSMDashboard: React.FC = () => {
     const [ventures, setVentures] = useState<Venture[]>([]);
     const [selectedVenture, setSelectedVenture] = useState<Venture | null>(null);
@@ -56,7 +114,7 @@ export const VSMDashboard: React.FC = () => {
     const [saving, setSaving] = useState(false);
 
     // Deliverables state
-    const [milestones, setMilestones] = useState<Record<string, string[]> | null>(null);
+    const [milestones, setMilestones] = useState<Record<string, DeliverableItem[]> | null>(null);
 
     // Venture Partner State
     const [selectedPartner, setSelectedPartner] = useState('');
@@ -250,21 +308,9 @@ export const VSMDashboard: React.FC = () => {
         if (!selectedVenture) return;
         setGeneratingDeliverables(true);
 
-        const isCommittee = userRole === 'committee';
-
         setTimeout(async () => {
-            const newMilestones: Record<string, string[]> = {};
-            STREAMS.forEach(stream => {
-                // Committee gets dates
-                const suffix = isCommittee ? ' (By Q3 2026)' : '';
-                newMilestones[stream] = [
-                    `Draft ${stream} strategy document${suffix}`,
-                    `Identify key ${stream} KPIs${suffix}`,
-                    `Hire lead for ${stream} execution${suffix}`,
-                    `Secure necessary ${stream} resources${suffix}`,
-                    `Review ${stream} progress${suffix}`
-                ];
-            });
+            // Use the detailed mock deliverables
+            const newMilestones = { ...MOCK_DELIVERABLES };
 
             try {
                 const { error } = await supabase
@@ -361,23 +407,41 @@ export const VSMDashboard: React.FC = () => {
         }
     };
 
-    const getStreamColor = (status: string) => {
-        switch (status) {
-            case 'No help needed': return 'bg-gray-50 border-gray-200 text-gray-500';
-            case 'Working on it': return 'bg-blue-50 border-blue-200 text-blue-700';
-            case 'Need guidance': return 'bg-amber-50 border-amber-200 text-amber-700';
-            case 'Need deep support': return 'bg-red-50 border-red-200 text-red-700 font-medium';
-            default: return 'bg-gray-50 border-gray-200 text-gray-500';
+    const handleStreamStatusChange = async (stream: string, newStatus: string) => {
+        if (!selectedVenture) return;
+
+        // Clone existing needs or create empty array
+        const currentNeeds = selectedVenture.needs ? [...selectedVenture.needs] : [];
+        const existingIndex = currentNeeds.findIndex(n => n.stream === stream);
+
+        if (existingIndex >= 0) {
+            currentNeeds[existingIndex] = { ...currentNeeds[existingIndex], status: newStatus };
+        } else {
+            currentNeeds.push({ stream, status: newStatus });
+        }
+
+        try {
+            // Optimistic Update
+            const updatedVenture = { ...selectedVenture, needs: currentNeeds };
+            setSelectedVenture(updatedVenture);
+            setVentures(prev => prev.map(v => v.id === selectedVenture.id ? updatedVenture : v));
+
+            const { error } = await supabase
+                .from('ventures')
+                .update({ needs: currentNeeds })
+                .eq('id', selectedVenture.id);
+
+            if (error) throw error;
+        } catch (error) {
+            console.error("Error updating stream status:", error);
+            alert("Failed to update status");
+            // Revert changes if needed (omitted for simplicity, but could refetch)
         }
     };
 
-    const getStreamLabel = (status: string) => {
-        if (status === 'On Track') return 'Working on it';
-        if (status === 'At Risk') return 'Need deep support';
-        if (status === 'Delayed') return 'Need guidance';
-        if (status === 'Not started') return 'No help needed';
-        return status;
-    };
+
+
+
 
 
     return (
@@ -595,14 +659,26 @@ export const VSMDashboard: React.FC = () => {
                                             <div className="grid grid-cols-2 gap-4">
                                                 {STREAMS.map(stream => (
                                                     <div key={stream} className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                                                        <h4 className="font-bold text-gray-800 mb-2 border-b border-gray-200 pb-1 text-sm">{stream}</h4>
-                                                        <ul className="space-y-2">
-                                                            {milestones[stream]?.map((item, i) => (
-                                                                <li key={i} className="flex gap-2 text-xs text-gray-600">
-                                                                    <span className="text-purple-400 font-bold">•</span>
-                                                                    {item}
-                                                                </li>
-                                                            ))}
+                                                        <h4 className="font-bold text-gray-800 mb-3 border-b border-gray-200 pb-2 text-sm uppercase tracking-wide">{stream}</h4>
+                                                        <ul className="space-y-2.5">
+                                                            {milestones[stream]?.map((item, i) => {
+                                                                const statusColors = {
+                                                                    green: 'bg-green-500',
+                                                                    orange: 'bg-orange-500',
+                                                                    red: 'bg-red-500',
+                                                                    gray: 'bg-gray-400',
+                                                                    blue: 'bg-blue-500'
+                                                                };
+                                                                return (
+                                                                    <li key={i} className="flex gap-2.5 text-xs">
+                                                                        <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${statusColors[item.status]}`}></span>
+                                                                        <div className="flex-1">
+                                                                            <div className="font-semibold text-gray-900">{item.title}</div>
+                                                                            <div className="text-gray-500 italic mt-0.5">{item.description}</div>
+                                                                        </div>
+                                                                    </li>
+                                                                );
+                                                            })}
                                                         </ul>
                                                     </div>
                                                 ))}
@@ -641,19 +717,27 @@ export const VSMDashboard: React.FC = () => {
                         )}
 
 
-                        {/* Section 3: Current Business Status (Streams) */}
+                        {/* Section 3: Operational Readiness Check */}
                         <div>
-                            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                <LayoutDashboard className="w-5 h-5 text-gray-500" />
-                                Current Business Status
-                            </h2>
-                            <div className="grid grid-cols-3 gap-3">
-                                {selectedVenture.needs?.map((need, i) => {
-                                    const statusLabel = getStreamLabel(need.status);
+                            <div className="mb-4">
+                                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                    <LayoutDashboard className="w-5 h-5 text-gray-500" />
+                                    Current Business Status
+                                </h2>
+                                <p className="text-sm font-medium text-gray-500 ml-7 mt-1">Operational Readiness Check</p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                {STREAMS.map((stream) => {
+                                    const need = selectedVenture.needs?.find(n => n.stream === stream);
+                                    const currentStatus = need?.status || 'Not started';
+
                                     return (
-                                        <div key={i} className={`p-3 rounded-lg border flex flex-col gap-1 ${getStreamColor(statusLabel)}`}>
-                                            <span className="text-xs font-bold uppercase opacity-70">{need.stream}</span>
-                                            <span className="text-sm font-semibold">{statusLabel}</span>
+                                        <div key={stream} className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm flex flex-col gap-3">
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{stream}</span>
+                                            <StatusSelect
+                                                status={currentStatus}
+                                                onChange={(newStatus) => handleStreamStatusChange(stream, newStatus)}
+                                            />
                                         </div>
                                     );
                                 })}
