@@ -165,8 +165,8 @@ export const VentureDetails: React.FC = () => {
                             <div key={idx} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50/50">
                                 <span className="font-medium text-gray-700">{stream.stream_name}</span>
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${stream.status === 'Done' ? 'bg-green-100 text-green-800' :
-                                        stream.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
-                                            'bg-red-100 text-red-800'
+                                    stream.status === 'Work in Progress' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
                                     }`}>
                                     {stream.status}
                                 </span>
@@ -177,6 +177,27 @@ export const VentureDetails: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Blockers & Challenges */}
+            {venture.blockers && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+                    <h3 className="text-lg font-bold text-gray-900">Specific Blockers or Challenges</h3>
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-lg p-4">
+                        <p className="text-gray-700 leading-relaxed">{venture.blockers}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Support Request */}
+            {venture.support_request && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+                    <h3 className="text-lg font-bold text-gray-900">Support Request</h3>
+                    <p className="text-sm text-gray-500 mb-2">How can the foundation specifically help you?</p>
+                    <div className="bg-blue-50/50 border border-blue-100 rounded-lg p-4">
+                        <p className="text-gray-700 leading-relaxed">{venture.support_request}</p>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

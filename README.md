@@ -194,7 +194,8 @@ Role: committee_member (auto-assigned because email contains "committee")
 - **[Email Fix](./FIX_EMAIL_RATE_LIMIT.md)** - Fix email rate limit issues
 - **[Architecture](./docs/ARCHITECTURE.md)** - System architecture overview
 - **[AI Prompts](./docs/ai-prompts/)** - AI prompt templates for consistent AI features
-- **[Contributing](./CONTRIBUTING.md)** - Contribution guidelines
+- **[API Documentation](./docs/API.md)** - Complete API reference
+- **[Contributing](./docs/CONTRIBUTING.md)** - Contribution guidelines
 
 ---
 
@@ -265,7 +266,7 @@ See [FIX_EMAIL_RATE_LIMIT.md](./FIX_EMAIL_RATE_LIMIT.md) for solutions.
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](./docs/CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
