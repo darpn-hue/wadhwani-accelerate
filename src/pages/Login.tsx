@@ -1,13 +1,13 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Rocket, Mail, Lock, ArrowRight, Chrome, AlertCircle, Briefcase, Users } from 'lucide-react';
+import { Rocket, Mail, Lock, ArrowRight, AlertCircle, Briefcase, Users } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
     const navigate = useNavigate();
+    const { signIn } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
@@ -19,59 +19,18 @@ export const Login: React.FC = () => {
         setError(null);
 
         try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+            await signIn(email, password);
 
-            if (error) {
-                // AUTO-SIGNUP LOGIC FOR DEMO ACCOUNTS
-                if (error.message.includes('Invalid login credentials') && (email.includes('@example.com') || email.includes('@admin.com'))) {
-                    console.log('Demo account not found, attempting auto-signup...');
-                    const { error: signUpError } = await supabase.auth.signUp({
-                        email,
-                        password,
-                        options: {
-                            data: {
-                                full_name: email.includes('admin') ? 'Demo Admin' : email.includes('committee') ? 'Committee Member' : 'Demo Entrepreneur',
-                            },
-                        },
-                    });
-
-                    if (signUpError) throw signUpError;
-
-                    // If signup successful (and emails auto-confirmed), user is logged in.
-                    // If email confirmation is required, this might still pause, but for many Supabase dev instances it's OFF.
-                    alert('Demo account created! Logging you in...');
-                    return; // The auth state change listener will handle the redirect
-                }
-                throw error;
-            }
-
-            // Manual redirect if needed (though onAuthStateChange usually handles this app-wide)
+            // Navigate based on email (simple role detection)
             if (email.includes('admin') || email.includes('manager') || email.includes('committee')) {
                 navigate('/vsm/dashboard');
             } else {
                 navigate('/dashboard');
             }
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleGoogleLogin = async () => {
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: window.location.origin + '/dashboard',
-                },
-            });
-            if (error) throw error;
-        } catch (err: any) {
-            setError(err.message);
         }
     };
 
@@ -98,41 +57,19 @@ export const Login: React.FC = () => {
 
         // Trigger auto-login
         setLoading(true);
-        try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email: demoEmail,
-                password: demoPassword,
-            });
-            if (error) {
-                // Fallback to auto-signup if login fails (similar to handleLogin)
-                if (error.message.includes('Invalid login credentials')) {
-                    const { error: signUpError } = await supabase.auth.signUp({
-                        email: demoEmail,
-                        password: demoPassword,
-                        options: {
-                            data: {
-                                full_name: role === 'success_mgr' ? 'Demo Screening Mgr' : role === 'venture_mgr' ? 'Demo Venture Mgr' : 'Demo Entrepreneur',
-                            },
-                        },
-                    });
-                    if (signUpError) throw signUpError;
-                    // Login should happen automatically after signup in most dev envs,
-                    // or we can retry sign in.
-                    const { error: retryError } = await supabase.auth.signInWithPassword({
-                        email: demoEmail,
-                        password: demoPassword,
-                    });
-                    if (retryError) throw retryError;
-                } else {
-                    throw error;
-                }
-            }
-            // Navigation handled by auth state change or manually here
-            if (role === 'success_mgr' || role === 'venture_mgr' || role === 'committee') navigate('/vsm/dashboard');
-            else navigate('/dashboard');
+        setError(null);
 
+        try {
+            await signIn(demoEmail, demoPassword);
+
+            // Navigation based on role
+            if (role === 'success_mgr' || role === 'venture_mgr' || role === 'committee') {
+                navigate('/vsm/dashboard');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'Demo login failed.');
         } finally {
             setLoading(false);
         }
@@ -154,25 +91,6 @@ export const Login: React.FC = () => {
 
             {/* Main Card */}
             <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
-
-                {/* Google Sign In */}
-                <button
-                    onClick={handleGoogleLogin}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
-                >
-                    <Chrome className="w-5 h-5 text-gray-900" />
-                    Sign in with Google
-                </button>
-
-                {/* Divider */}
-                <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-gray-200" />
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="bg-white px-2 text-gray-500">Or continue with email</span>
-                    </div>
-                </div>
 
                 {/* Form */}
                 <div className="space-y-4">

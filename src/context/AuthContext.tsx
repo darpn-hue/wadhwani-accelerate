@@ -1,59 +1,101 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
+
+interface User {
+    id: string;
+    email?: string;
+    user_metadata?: {
+        full_name?: string;
+        role?: string;
+    };
+}
 
 interface AuthContextType {
-    session: Session | null;
     user: User | null;
     loading: boolean;
-    signInWithGoogle: () => Promise<void>;
+    signIn: (email: string, password: string) => Promise<void>;
+    signUp: (email: string, password: string, fullName: string) => Promise<void>;
     signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [session, setSession] = useState<Session | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
+        // Check if user is logged in (has access token)
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            // Fetch user profile
+            api.getMe()
+                .then(({ profile }) => {
+                    setUser({
+                        id: profile.id,
+                        email: profile.email,
+                        user_metadata: {
+                            full_name: profile.full_name,
+                            role: profile.role,
+                        },
+                    });
+                })
+                .catch((error) => {
+                    console.error('Failed to fetch user:', error);
+                    // Clear invalid token
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        } else {
             setLoading(false);
-        });
-
-        // Listen for changes
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            setLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
+        }
     }, []);
 
-    const signInWithGoogle = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin + '/dashboard',
-            },
+    const signIn = async (email: string, password: string) => {
+        const { user: apiUser, session } = await api.login(email, password);
+
+        // Store tokens
+        localStorage.setItem('access_token', session.access_token);
+        localStorage.setItem('refresh_token', session.refresh_token);
+
+        // Set user state
+        setUser(apiUser);
+    };
+
+    const signUp = async (email: string, password: string, fullName: string) => {
+        const { user: apiUser, session } = await api.signup({
+            email,
+            password,
+            full_name: fullName,
+            role: 'entrepreneur', // Default role
         });
-        if (error) throw error;
+
+        // Store tokens
+        localStorage.setItem('access_token', session.access_token);
+        localStorage.setItem('refresh_token', session.refresh_token);
+
+        // Set user state
+        setUser(apiUser);
     };
 
     const signOut = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
+        try {
+            await api.logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            // Clear tokens and user state
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            setUser(null);
+        }
     };
 
     return (
-        <AuthContext.Provider value={{ session, user, loading, signInWithGoogle, signOut }}>
+        <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut }}>
             {children}
         </AuthContext.Provider>
     );

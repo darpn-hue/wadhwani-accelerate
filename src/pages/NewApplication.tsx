@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Loader2, Mic } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 import { StatusSelect } from '../components/StatusSelect';
@@ -88,74 +88,42 @@ export const NewApplication: React.FC = () => {
         setIsSubmitting(true);
 
         try {
-            const { data: venture, error } = await supabase.from('ventures').insert({
-                user_id: user.id,
+            // 1. Create Venture via API
+            const { venture } = await api.createVenture({
                 name: formData.ventureName,
-                founder_name: formData.founderName, // NEW: Store founder name
-                description: `${formData.whatDoYouSell} • ${formData.whoDoYouSellTo}`,
-                location: formData.regionsCovered,
-                city: formData.city,
-                revenue_12m: formData.currentRevenue,
-                full_time_employees: formData.teamSize,
+                founder_name: formData.founderName,
                 program: 'Accelerate',
-                status: 'Submitted',
-
-                growth_focus: formData.growthFocus, // Tracked from toggle buttons
-                revenue_potential_3y: formData.revenuePotential,
-                min_investment: formData.investment,
-                incremental_hiring: formData.incrementalHiring,
-
-                blockers: formData.blockers,
-                support_request: formData.supportRequest,
-
                 growth_current: {
-                    // Storing structured data in JSONB as backup/searchable extras
                     product: formData.whatDoYouSell,
                     segment: formData.whoDoYouSellTo,
                     geography: formData.regionsCovered,
+                    revenue: formData.currentRevenue,
                 },
                 growth_target: {
                     product: formData.focusProduct,
                     segment: formData.focusSegment,
-                    geography: formData.focusGeography
-                }, // Storing details for all potential growth areas
+                    geography: formData.focusGeography,
+                },
+                growth_focus: formData.growthFocus,
                 commitment: {
-                    // Keeping legacy structure for compatibility if needed, but main data is now in columns
                     investment: formData.investment,
-                    teamSize: formData.teamSize
-                }
-            })
-                .select()
-                .single();
+                    teamSize: formData.teamSize,
+                },
+                blockers: formData.blockers,
+                support_request: formData.supportRequest,
+            });
 
-            if (error) throw error;
-
-            // 2. Insert Venture Streams (Needs)
-            // Map the needs array to the new table structure
-            const streamsToInsert = formData.needs.map(need => ({
-                venture_id: venture.id,
-                stream_name: need.stream,
-                status: need.status, // Directly store the string from StatusSelect
-                owner: 'Founder',
-                updated_at: new Date().toISOString()
-            }));
-
-            const { error: streamsError } = await supabase
-                .from('venture_streams')
-                .insert(streamsToInsert);
-
-            if (streamsError) throw streamsError;
-
-            // 3. Initialize Support Hours
-            const { error: hoursError } = await supabase
-                .from('support_hours')
-                .insert({
-                    venture_id: venture.id,
-                    allocated: 15,
-                    used: 0
+            // 2. Create Venture Streams via API
+            for (const need of formData.needs) {
+                await api.createStream(venture.id, {
+                    stream_name: need.stream,
+                    status: need.status,
                 });
+            }
 
-            if (hoursError) console.error("Error creating support hours:", hoursError);
+            // 3. Submit the venture
+            await api.submitVenture(venture.id);
+
             setIsSubmitted(true);
         } catch (err) {
             console.error('Error submitting application:', err);

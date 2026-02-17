@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Rocket, Mail, Lock, ArrowRight, Chrome, User, AlertCircle } from 'lucide-react';
+import { Rocket, Mail, Lock, ArrowRight, User, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export const Signup: React.FC = () => {
     const navigate = useNavigate();
+    const { signUp } = useAuth();
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -18,27 +19,11 @@ export const Signup: React.FC = () => {
         setError(null);
 
         try {
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                        role: 'entrepreneur',
-                    },
-                },
-            });
-
-            if (error) throw error;
-
-            if (data.session) {
-                navigate('/dashboard');
-            } else {
-                alert('Signup successful! Please check your email for confirmation.');
-                navigate('/login');
-            }
+            await signUp(email, password, fullName);
+            // Navigate to dashboard after successful signup
+            navigate('/dashboard');
         } catch (err: any) {
-            setError(err.message);
+            setError(err.message || 'Signup failed. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -60,22 +45,6 @@ export const Signup: React.FC = () => {
 
             {/* Main Card */}
             <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8 space-y-6">
-
-                {/* Google Sign Up */}
-                <button className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700">
-                    <Chrome className="w-5 h-5 text-gray-900" />
-                    Sign up with Google
-                </button>
-
-                {/* Divider */}
-                <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-gray-200" />
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="bg-white px-2 text-gray-500">Or continue with email</span>
-                    </div>
-                </div>
 
                 {/* Form */}
                 <div className="space-y-4">
