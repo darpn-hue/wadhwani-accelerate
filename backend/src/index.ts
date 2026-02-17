@@ -1,0 +1,76 @@
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { config } from './config/env';
+import routes from './routes';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { logger, logRequest } from './utils/logger';
+
+const app = express();
+
+// Security middleware
+app.use(helmet());
+
+// CORS configuration
+app.use(cors({
+    origin: config.frontendUrl,
+    credentials: true,
+}));
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware
+app.use((req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now();
+
+    res.on('finish', () => {
+        const duration = Date.now() - start;
+        logRequest(req.method, req.path, res.statusCode, duration);
+    });
+
+    next();
+});
+
+// API routes
+app.use('/api', routes);
+
+// Root endpoint
+app.get('/', (req: Request, res: Response) => {
+    res.json({
+        message: 'Wadhwani Ventures API',
+        version: '1.0.0',
+        endpoints: {
+            health: '/api/health',
+            docs: '/api/docs (coming soon)',
+        },
+    });
+});
+
+// 404 handler
+app.use(notFoundHandler);
+
+// Error handler (must be last)
+app.use(errorHandler);
+
+// Start server
+const PORT = config.port;
+app.listen(PORT, () => {
+    logger(`Server running on port ${PORT}`, 'info');
+    logger(`Environment: ${config.nodeEnv}`, 'info');
+    logger(`Frontend URL: ${config.frontendUrl}`, 'info');
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+    logger('SIGTERM signal received: closing HTTP server', 'info');
+    process.exit(0);
+});
+
+process.on('SIGINT', () => {
+    logger('SIGINT signal received: closing HTTP server', 'info');
+    process.exit(0);
+});
+
+export default app;
