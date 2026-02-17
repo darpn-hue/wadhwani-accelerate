@@ -91,7 +91,7 @@ class ApiClient {
     }
 
     async getVenture(id: string) {
-        return this.request<{ venture: any; streams?: any[] }>(`/ventures/${id}`);
+        return this.request<{ venture: any; streams?: any[]; milestones?: any[]; support_hours?: any }>(`/ventures/${id}`);
     }
 
     async updateVenture(id: string, data: any) {

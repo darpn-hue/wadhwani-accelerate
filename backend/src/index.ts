@@ -25,9 +25,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use((req: Request, res: Response, next: NextFunction) => {
     const start = Date.now();
 
+    // Debug log
+    logger(`Incoming ${req.method} ${req.url} from ${req.ip}`, 'info');
+    // logger(`Body: ${JSON.stringify(req.body)}`, 'debug');
+
     res.on('finish', () => {
         const duration = Date.now() - start;
-        logRequest(req.method, req.path, res.statusCode, duration);
+        logRequest(req.method, req.originalUrl, res.statusCode, duration);
     });
 
     next();

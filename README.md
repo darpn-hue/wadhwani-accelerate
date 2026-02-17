@@ -27,29 +27,56 @@ A comprehensive platform designed to help rural ventures scale by providing AI-d
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React (Vite), TypeScript, Tailwind CSS
-- **Backend & Database**: Supabase (PostgreSQL, Auth, Realtime)
+### Frontend
+- **Framework**: React (Vite), TypeScript, Tailwind CSS
 - **State Management**: React Context, Local State
 - **Routing**: React Router DOM
 - **Icons**: Lucide React
 - **Animations**: Framer Motion
-- **Deployment**: Netlify
+
+### Backend
+- **API Server**: Node.js, Express.js, TypeScript
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: JWT tokens via Supabase Auth
+- **Validation**: Zod schemas
+- **Security**: Helmet, CORS
+
+### Deployment
+- **Frontend**: Netlify
+- **Backend**: Railway / Render
+- **Database**: Supabase Cloud
 
 ---
 
 ## 📂 Project Structure
 
 ```bash
+# Frontend
 src/
 ├── components/         # Reusable UI components
 │   ├── ui/             # Atomic components (Button, Input, Card)
 │   └── ...             # Feature-specific components
 ├── context/            # React Context providers (Auth, etc.)
-├── lib/                # Library configurations (Supabase client)
+├── lib/                
+│   ├── supabase.ts     # Supabase client (legacy, being phased out)
+│   └── api.ts          # Backend API client
 ├── pages/              # Main page views (Dashboards, Wizards)
 ├── layouts/            # Layout components (VSM, Committee)
 ├── App.tsx             # Main entry point with Routing
 └── main.tsx            # DOM rendering
+
+# Backend
+backend/
+├── src/
+│   ├── config/         # Configuration (Supabase, env)
+│   ├── middleware/     # Auth, validation, error handling
+│   ├── routes/         # API routes (auth, ventures, streams)
+│   ├── services/       # Business logic
+│   ├── types/          # TypeScript types and Zod schemas
+│   ├── utils/          # Helper functions
+│   └── index.ts        # Server entry point
+├── package.json
+└── tsconfig.json
 ```
 
 ---
@@ -68,13 +95,7 @@ git clone https://github.com/vpx-pro/wadhwani-assisted-platform.git
 cd wadhwani-assisted-platform
 ```
 
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Set Up Supabase
+### 2. Set Up Supabase
 
 #### Create a New Supabase Project
 1. Go to [https://supabase.com/dashboard](https://supabase.com/dashboard)
@@ -100,15 +121,50 @@ Go to **Table Editor** and confirm you see:
 - `support_hours` - Support hour allocation
 - `venture_history` - Status change history
 
-### 4. Configure Environment Variables
+### 3. Configure Environment Variables
 
+#### Frontend Environment (.env in root)
 1. In Supabase Dashboard, go to **Settings** → **API**
 2. Copy your **Project URL** and **anon/public key**
 3. Create a `.env` file in the project root:
 
 ```env
+# Backend API URL
+VITE_API_URL=http://localhost:3001/api
+
+# Supabase Configuration (for legacy components)
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+#### Backend Environment (backend/.env)
+1. Create a `backend/.env` file:
+
+```env
+PORT=3001
+NODE_ENV=development
+
+# Supabase Configuration
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your-anon-key-here
+# SUPABASE_SERVICE_ROLE_KEY=your-service-role-key (optional, for admin operations)
+
+# Frontend URL (for CORS)
+FRONTEND_URL=http://localhost:5173
+```
+
+### 4. Install Dependencies
+
+#### Frontend
+```bash
+npm install
+```
+
+#### Backend
+```bash
+cd backend
+npm install
+cd ..
 ```
 
 ### 5. Disable Email Confirmation (For Development)
@@ -120,13 +176,24 @@ VITE_SUPABASE_ANON_KEY=your-anon-key-here
 
 This allows instant signup without email verification during development.
 
-### 6. Run Development Server
+### 6. Run Development Servers
 
+You need to run **both** the frontend and backend servers:
+
+#### Terminal 1 - Backend API
+```bash
+cd backend
+npm run dev
+```
+
+Backend will start on **http://localhost:3001**
+
+#### Terminal 2 - Frontend
 ```bash
 npm run dev
 ```
 
-Access the app at **http://localhost:5173**
+Frontend will start on **http://localhost:5173**
 
 ---
 

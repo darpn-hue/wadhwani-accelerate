@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import * as ventureService from '../services/ventureService';
 import { authenticateUser } from '../middleware/auth';
 import { validateBody, validateQuery } from '../middleware/validate';
+import { createAuthenticatedClient } from '../config/supabase';
 import {
     createVentureSchema,
     updateVentureSchema,
@@ -12,6 +13,21 @@ import {
 import { successResponse, createdResponse, noContentResponse } from '../utils/response';
 
 const router = Router();
+
+// Helper to get authenticated client and user role
+async function getContext(req: Request) {
+    const token = req.headers.authorization?.split(' ')[1] || '';
+    const supabase = createAuthenticatedClient(token);
+
+    // Get user profile/role safely
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', req.user.id)
+        .single();
+
+    return { supabase, role: profile?.role || 'entrepreneur' };
+}
 
 // ============ VENTURE ROUTES ============
 
@@ -25,15 +41,12 @@ router.get(
     validateQuery(ventureQuerySchema),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { data: profile } = await require('../config/supabase').supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', req.user.id)
-                .single();
+            const { supabase, role } = await getContext(req);
 
             const result = await ventureService.getVentures(
+                supabase,
                 req.user.id,
-                profile?.role || 'entrepreneur',
+                role,
                 req.query as any
             );
 
@@ -54,9 +67,13 @@ router.post(
     validateBody(createVentureSchema),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const venture = await ventureService.createVenture(req.user.id, req.body);
+            const token = req.headers.authorization?.split(' ')[1] || '';
+            const supabase = createAuthenticatedClient(token);
+
+            const venture = await ventureService.createVenture(supabase, req.user.id, req.body);
             createdResponse(res, { venture });
         } catch (error) {
+            console.error('Error creating venture:', error);
             next(error);
         }
     }
@@ -71,16 +88,13 @@ router.get(
     authenticateUser,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { data: profile } = await require('../config/supabase').supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', req.user.id)
-                .single();
+            const { supabase, role } = await getContext(req);
 
             const result = await ventureService.getVentureById(
+                supabase,
                 req.params.id,
                 req.user.id,
-                profile?.role || 'entrepreneur'
+                role
             );
 
             successResponse(res, result);
@@ -100,16 +114,13 @@ router.put(
     validateBody(updateVentureSchema),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { data: profile } = await require('../config/supabase').supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', req.user.id)
-                .single();
+            const { supabase, role } = await getContext(req);
 
             const venture = await ventureService.updateVenture(
+                supabase,
                 req.params.id,
                 req.user.id,
-                profile?.role || 'entrepreneur',
+                role,
                 req.body
             );
 
@@ -129,16 +140,13 @@ router.delete(
     authenticateUser,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { data: profile } = await require('../config/supabase').supabase
-                .from('profiles')
-                .select('role')
-                .eq('id', req.user.id)
-                .single();
+            const { supabase, role } = await getContext(req);
 
             await ventureService.deleteVenture(
+                supabase,
                 req.params.id,
                 req.user.id,
-                profile?.role || 'entrepreneur'
+                role
             );
 
             noContentResponse(res);
@@ -157,7 +165,10 @@ router.post(
     authenticateUser,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const venture = await ventureService.submitVenture(req.params.id, req.user.id);
+            const token = req.headers.authorization?.split(' ')[1] || '';
+            const supabase = createAuthenticatedClient(token);
+
+            const venture = await ventureService.submitVenture(supabase, req.params.id, req.user.id);
             successResponse(res, {
                 message: 'Venture submitted for review',
                 venture
@@ -179,7 +190,10 @@ router.get(
     authenticateUser,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const streams = await ventureService.getVentureStreams(req.params.id);
+            const token = req.headers.authorization?.split(' ')[1] || '';
+            const supabase = createAuthenticatedClient(token);
+
+            const streams = await ventureService.getVentureStreams(supabase, req.params.id);
             successResponse(res, { streams });
         } catch (error) {
             next(error);
@@ -197,7 +211,10 @@ router.post(
     validateBody(createStreamSchema),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const stream = await ventureService.createStream(req.params.id, req.body);
+            const token = req.headers.authorization?.split(' ')[1] || '';
+            const supabase = createAuthenticatedClient(token);
+
+            const stream = await ventureService.createStream(supabase, req.params.id, req.body);
             createdResponse(res, { stream });
         } catch (error) {
             next(error);
@@ -215,7 +232,10 @@ router.put(
     validateBody(updateStreamSchema),
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const stream = await ventureService.updateStream(req.params.id, req.body);
+            const token = req.headers.authorization?.split(' ')[1] || '';
+            const supabase = createAuthenticatedClient(token);
+
+            const stream = await ventureService.updateStream(supabase, req.params.id, req.body);
             successResponse(res, { stream });
         } catch (error) {
             next(error);
@@ -232,7 +252,10 @@ router.delete(
     authenticateUser,
     async (req: Request, res: Response, next: NextFunction) => {
         try {
-            await ventureService.deleteStream(req.params.id);
+            const token = req.headers.authorization?.split(' ')[1] || '';
+            const supabase = createAuthenticatedClient(token);
+
+            await ventureService.deleteStream(supabase, req.params.id);
             noContentResponse(res);
         } catch (error) {
             next(error);

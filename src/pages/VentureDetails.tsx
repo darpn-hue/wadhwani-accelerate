@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Loader2 } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 export const VentureDetails: React.FC = () => {
@@ -21,24 +21,11 @@ export const VentureDetails: React.FC = () => {
 
     const fetchVenture = async (ventureId: string) => {
         try {
-            // 1. Fetch Venture Data
-            const { data: ventureData, error: ventureError } = await supabase
-                .from('ventures')
-                .select('*')
-                .eq('id', ventureId)
-                .single();
+            // Fetch Venture Data and Streams in one call
+            const { venture, streams } = await api.getVenture(ventureId);
 
-            if (ventureError) throw ventureError;
-            setVenture(ventureData);
-
-            // 2. Fetch Streams (Needs)
-            const { data: streamsData, error: streamsError } = await supabase
-                .from('venture_streams')
-                .select('*')
-                .eq('venture_id', ventureId);
-
-            if (streamsError) console.error('Error fetching streams:', streamsError);
-            setStreams(streamsData || []);
+            setVenture(venture);
+            setStreams(streams || []);
 
         } catch (err) {
             console.error('Error fetching venture:', err);

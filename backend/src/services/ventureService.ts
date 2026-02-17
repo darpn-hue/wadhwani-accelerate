@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { SupabaseClient } from '@supabase/supabase-js';
 import {
     Venture,
     VentureStream,
@@ -11,8 +11,13 @@ import {
 /**
  * Get all ventures for a user (with optional filters)
  */
-export async function getVentures(userId: string, userRole: string, filters?: VentureQueryParams) {
-    let query = supabase.from('ventures').select('*', { count: 'exact' });
+export async function getVentures(
+    client: SupabaseClient,
+    userId: string,
+    userRole: string,
+    filters?: VentureQueryParams
+) {
+    let query = client.from('ventures').select('*', { count: 'exact' });
 
     // Entrepreneurs can only see their own ventures
     if (userRole === 'entrepreneur') {
@@ -49,8 +54,13 @@ export async function getVentures(userId: string, userRole: string, filters?: Ve
 /**
  * Get a single venture by ID
  */
-export async function getVentureById(ventureId: string, userId: string, userRole: string) {
-    const { data: venture, error } = await supabase
+export async function getVentureById(
+    client: SupabaseClient,
+    ventureId: string,
+    userId: string,
+    userRole: string
+) {
+    const { data: venture, error } = await client
         .from('ventures')
         .select('*')
         .eq('id', ventureId)
@@ -65,22 +75,41 @@ export async function getVentureById(ventureId: string, userId: string, userRole
     }
 
     // Get streams
-    const { data: streams } = await supabase
+    const { data: streams } = await client
         .from('venture_streams')
         .select('*')
         .eq('venture_id', ventureId);
 
+    // Get milestones
+    const { data: milestones } = await client
+        .from('venture_milestones')
+        .select('*')
+        .eq('venture_id', ventureId);
+
+    // Get support hours
+    const { data: supportHours } = await client
+        .from('support_hours')
+        .select('*')
+        .eq('venture_id', ventureId)
+        .single();
+
     return {
         venture,
         streams: streams || [],
+        milestones: milestones || [],
+        support_hours: supportHours || null,
     };
 }
 
 /**
  * Create a new venture
  */
-export async function createVenture(userId: string, data: CreateVentureRequest): Promise<Venture> {
-    const { data: venture, error } = await supabase
+export async function createVenture(
+    client: SupabaseClient,
+    userId: string,
+    data: CreateVentureRequest
+): Promise<Venture> {
+    const { data: venture, error } = await client
         .from('ventures')
         .insert({
             user_id: userId,
@@ -98,13 +127,14 @@ export async function createVenture(userId: string, data: CreateVentureRequest):
  * Update a venture
  */
 export async function updateVenture(
+    client: SupabaseClient,
     ventureId: string,
     userId: string,
     userRole: string,
     data: UpdateVentureRequest
 ): Promise<Venture> {
     // Get venture first to check permissions
-    const { data: existingVenture, error: fetchError } = await supabase
+    const { data: existingVenture, error: fetchError } = await client
         .from('ventures')
         .select('*')
         .eq('id', ventureId)
@@ -123,7 +153,7 @@ export async function updateVenture(
         delete data.status;
     }
 
-    const { data: venture, error } = await supabase
+    const { data: venture, error } = await client
         .from('ventures')
         .update(data)
         .eq('id', ventureId)
@@ -137,9 +167,14 @@ export async function updateVenture(
 /**
  * Delete a venture
  */
-export async function deleteVenture(ventureId: string, userId: string, userRole: string): Promise<void> {
+export async function deleteVenture(
+    client: SupabaseClient,
+    ventureId: string,
+    userId: string,
+    userRole: string
+): Promise<void> {
     // Get venture first to check permissions
-    const { data: existingVenture, error: fetchError } = await supabase
+    const { data: existingVenture, error: fetchError } = await client
         .from('ventures')
         .select('*')
         .eq('id', ventureId)
@@ -156,7 +191,7 @@ export async function deleteVenture(ventureId: string, userId: string, userRole:
         throw new Error('Only entrepreneurs can delete their ventures');
     }
 
-    const { error } = await supabase
+    const { error } = await client
         .from('ventures')
         .delete()
         .eq('id', ventureId);
@@ -167,8 +202,12 @@ export async function deleteVenture(ventureId: string, userId: string, userRole:
 /**
  * Submit a venture for review
  */
-export async function submitVenture(ventureId: string, userId: string): Promise<Venture> {
-    return updateVenture(ventureId, userId, 'entrepreneur', { status: 'submitted' });
+export async function submitVenture(
+    client: SupabaseClient,
+    ventureId: string,
+    userId: string
+): Promise<Venture> {
+    return updateVenture(client, ventureId, userId, 'entrepreneur', { status: 'submitted' });
 }
 
 // ============ STREAM OPERATIONS ============
@@ -176,8 +215,8 @@ export async function submitVenture(ventureId: string, userId: string): Promise<
 /**
  * Get streams for a venture
  */
-export async function getVentureStreams(ventureId: string): Promise<VentureStream[]> {
-    const { data, error } = await supabase
+export async function getVentureStreams(client: SupabaseClient, ventureId: string): Promise<VentureStream[]> {
+    const { data, error } = await client
         .from('venture_streams')
         .select('*')
         .eq('venture_id', ventureId)
@@ -190,8 +229,12 @@ export async function getVentureStreams(ventureId: string): Promise<VentureStrea
 /**
  * Create a stream for a venture
  */
-export async function createStream(ventureId: string, data: CreateStreamRequest): Promise<VentureStream> {
-    const { data: stream, error } = await supabase
+export async function createStream(
+    client: SupabaseClient,
+    ventureId: string,
+    data: CreateStreamRequest
+): Promise<VentureStream> {
+    const { data: stream, error } = await client
         .from('venture_streams')
         .insert({
             venture_id: ventureId,
@@ -207,8 +250,12 @@ export async function createStream(ventureId: string, data: CreateStreamRequest)
 /**
  * Update a stream
  */
-export async function updateStream(streamId: string, data: Partial<CreateStreamRequest>): Promise<VentureStream> {
-    const { data: stream, error } = await supabase
+export async function updateStream(
+    client: SupabaseClient,
+    streamId: string,
+    data: Partial<CreateStreamRequest>
+): Promise<VentureStream> {
+    const { data: stream, error } = await client
         .from('venture_streams')
         .update(data)
         .eq('id', streamId)
@@ -222,8 +269,8 @@ export async function updateStream(streamId: string, data: Partial<CreateStreamR
 /**
  * Delete a stream
  */
-export async function deleteStream(streamId: string): Promise<void> {
-    const { error } = await supabase
+export async function deleteStream(client: SupabaseClient, streamId: string): Promise<void> {
+    const { error } = await client
         .from('venture_streams')
         .delete()
         .eq('id', streamId);

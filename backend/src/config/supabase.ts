@@ -12,6 +12,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// For admin operations (if needed later)
-// const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-// export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+export function createAuthenticatedClient(token: string) {
+    if (!token) return supabase;
+
+    return createClient(supabaseUrl!, supabaseAnonKey!, {
+        global: {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
+        },
+    });
+}

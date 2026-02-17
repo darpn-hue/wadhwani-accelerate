@@ -10,12 +10,16 @@ export function validateBody(schema: ZodSchema) {
             req.body = await schema.parseAsync(req.body);
             next();
         } catch (error: any) {
+            const details = error.errors?.map((err: any) => ({
+                field: err.path.join('.'),
+                message: err.message,
+            }));
+
+            console.error(`Validation Error:`, JSON.stringify(details, null, 2));
+
             res.status(400).json({
                 error: 'Validation failed',
-                details: error.errors?.map((err: any) => ({
-                    field: err.path.join('.'),
-                    message: err.message,
-                })),
+                details,
             });
         }
     };

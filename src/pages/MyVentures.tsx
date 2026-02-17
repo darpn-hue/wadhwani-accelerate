@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FileText, Plus, User, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { VentureCard, type Venture } from '../components/VentureCard';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 export const MyVentures: React.FC = () => {
@@ -20,12 +20,7 @@ export const MyVentures: React.FC = () => {
 
     const fetchVentures = async () => {
         try {
-            const { data, error } = await supabase
-                .from('ventures')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
+            const { ventures: data } = await api.getVentures();
 
             // Transform data if needed to match Venture type, 
             // but if table schema matches interface mostly, straightforward:

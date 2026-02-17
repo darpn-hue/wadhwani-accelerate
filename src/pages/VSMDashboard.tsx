@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { Sparkles, LayoutDashboard, Users, TrendingUp, DollarSign, Target, Briefcase, Building2, FileText, Send, CheckCircle, Edit3, X, Save, UserPlus } from 'lucide-react';
+import { api } from '../lib/api';
+import {
+    Sparkles, LayoutDashboard, Users, TrendingUp, DollarSign, Target, Briefcase, Building2,
+    FileText, Send, CheckCircle, Edit3, X, Save, Loader2
+} from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { StatusSelect } from '../components/StatusSelect';
+import { useAuth } from '../context/AuthContext';
 
 // Types
 interface DeliverableItem {
@@ -26,7 +30,7 @@ interface Venture {
     // JSONB Fields
     growth_current: any; // { industry, product, segment, geography }
     growth_target: any; // { product, segment, geography } (descriptions)
-    needs: { stream: string, status: string }[];
+    needs: { id?: string; stream: string; status: string }[]; // mapped from streams
     status: string;
     program_recommendation?: string;
     agreement_status?: string; // 'Sent', 'Signed', etc.
@@ -40,13 +44,6 @@ interface Venture {
 }
 
 const STREAMS = ['Product', 'GTM', 'Funding', 'Supply Chain', 'Operations', 'Team'];
-const VENTURE_PARTNERS = [
-    'Sanjay (Fintech)',
-    'Vipul (Target/Agri)',
-    'Anjali (Health)',
-    'Rahul (Consumer)',
-    'Priya (SaaS)'
-];
 
 const MOCK_DELIVERABLES: Record<string, DeliverableItem[]> = {
     'Product': [
@@ -100,6 +97,7 @@ const MOCK_DELIVERABLES: Record<string, DeliverableItem[]> = {
 };
 
 export const VSMDashboard: React.FC = () => {
+    const { user } = useAuth();
     const [ventures, setVentures] = useState<Venture[]>([]);
     const [selectedVenture, setSelectedVenture] = useState<Venture | null>(null);
     const [loading, setLoading] = useState(true);
@@ -126,8 +124,10 @@ export const VSMDashboard: React.FC = () => {
     const [userRole, setUserRole] = useState<string | null>(null);
 
     useEffect(() => {
-        checkUserRole();
-    }, []);
+        if (user) {
+            checkUserRole();
+        }
+    }, [user]);
 
     useEffect(() => {
         if (userRole) {
@@ -135,55 +135,54 @@ export const VSMDashboard: React.FC = () => {
         }
     }, [userRole]);
 
-    const checkUserRole = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-            // Check for Venture Manager first (arun@admin.com)
-            if (user.email?.includes('arun')) {
-                setUserRole('venture_mgr');
-                return;
-            }
-            // Check for Committee (committee@admin.com)
-            if (user.email?.includes('committee')) {
-                setUserRole('committee');
-                return;
-            }
-            // Then Screening Manager (other admin emails)
-            if (user.email?.includes('admin')) {
-                setUserRole('success_mgr');
-                return;
-            }
-
-            // Fallback or explicit profile check
-            setUserRole('entrepreneur');
-        } else {
+    const checkUserRole = () => {
+        if (!user) {
             setUserRole('not-logged-in');
+            return;
         }
+
+        const email = user.email || '';
+        // Check for Venture Manager first (arun@admin.com)
+        if (email.includes('arun')) {
+            setUserRole('venture_mgr');
+            return;
+        }
+        // Check for Committee (committee@admin.com)
+        if (email.includes('committee')) {
+            setUserRole('committee');
+            return;
+        }
+        // Then Screening Manager (other admin emails)
+        if (email.includes('admin')) {
+            setUserRole('success_mgr');
+            return;
+        }
+
+        // Fallback or explicit profile check
+        setUserRole('entrepreneur');
     };
 
     const fetchVentures = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('ventures')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
+            const { ventures: data } = await api.getVentures();
 
             let filteredData = data || [];
 
-            // ROLE BASED FILTERING
+            // ROLE BASED FILTERING (keep client-side for now as API returns all for staff)
             if (userRole === 'venture_mgr') {
-                filteredData = filteredData.filter(v => v.program_recommendation === 'Accelerate Prime');
+                filteredData = filteredData.filter((v: any) => v.program_recommendation === 'Accelerate Prime');
             } else if (userRole === 'committee') {
-                filteredData = filteredData.filter(v => ['Accelerate Core', 'Accelerate Select'].includes(v.program_recommendation || ''));
-            } else if (userRole === 'entrepreneur') {
-                // Entrepreneurs usually handled by RLS, but double check
+                filteredData = filteredData.filter((v: any) => ['Accelerate Core', 'Accelerate Select'].includes(v.program_recommendation || ''));
             }
 
+            // Map data to ensure needs array exists
+            const mappedVentures = filteredData.map((v: any) => ({
+                ...v,
+                needs: v.needs || []
+            }));
 
-            setVentures(filteredData);
+            setVentures(mappedVentures);
         } catch (error) {
             console.error('Error fetching ventures:', error);
         } finally {
@@ -191,21 +190,42 @@ export const VSMDashboard: React.FC = () => {
         }
     };
 
+    const handleVentureSelect = async (venture: Venture) => {
+        // Optimistically set selected to show UI immediately
+        setSelectedVenture(venture);
+        setAnalysisResult(null);
 
-    useEffect(() => {
-        if (selectedVenture) {
-            setVsmNotes(selectedVenture.vsm_notes || '');
-            setProgram(selectedVenture.program_recommendation || 'Selfserve');
-            setInternalComments(selectedVenture.internal_comments || '');
-            setAnalysisResult(selectedVenture.ai_analysis || null);
-            setMilestones(selectedVenture.agreement_milestones || null);
-            setSelectedPartner(selectedVenture.venture_partner || '');
+        // Fetch fresh details with streams
+        try {
+            const { venture: freshVenture, streams } = await api.getVenture(venture.id);
 
-            // Reset edit state
-            setIsEditingProfile(false);
-            setEditProfileData(selectedVenture.growth_target || {});
+            // Map streams to needs format
+            const mappedNeeds = (streams || []).map((s: any) => ({
+                id: s.id,
+                stream: s.stream_name,
+                status: s.status
+            }));
+
+            const fullVenture = {
+                ...freshVenture,
+                needs: mappedNeeds
+            };
+
+            setSelectedVenture(fullVenture);
+
+            // Setup form state
+            setVsmNotes(freshVenture.vsm_notes || '');
+            setProgram(freshVenture.program_recommendation || 'Selfserve');
+            setInternalComments(freshVenture.internal_comments || '');
+            setAnalysisResult(freshVenture.ai_analysis || null);
+            setMilestones(freshVenture.agreement_milestones || null);
+            setSelectedPartner(freshVenture.venture_partner || '');
+            setEditProfileData(freshVenture.growth_target || {});
+
+        } catch (error) {
+            console.error('Error fetching venture details:', error);
         }
-    }, [selectedVenture]);
+    };
 
     const handleSave = async () => {
         if (!selectedVenture) return;
@@ -229,12 +249,7 @@ export const VSMDashboard: React.FC = () => {
                 updatePayload.venture_partner = selectedPartner;
             }
 
-            const { error } = await supabase
-                .from('ventures')
-                .update(updatePayload)
-                .eq('id', selectedVenture.id);
-
-            if (error) throw error;
+            await api.updateVenture(selectedVenture.id, updatePayload);
 
             setVentures(prev => prev.map(v =>
                 v.id === selectedVenture.id
@@ -282,14 +297,7 @@ export const VSMDashboard: React.FC = () => {
             };
 
             try {
-                const { error } = await supabase
-                    .from('ventures')
-                    .update({
-                        ai_analysis: newAnalysis
-                    })
-                    .eq('id', selectedVenture.id);
-
-                if (error) throw error;
+                await api.updateVenture(selectedVenture.id, { ai_analysis: newAnalysis });
 
                 setAnalysisResult(newAnalysis);
                 setVentures(prev => prev.map(v =>
@@ -313,14 +321,8 @@ export const VSMDashboard: React.FC = () => {
             const newMilestones = { ...MOCK_DELIVERABLES };
 
             try {
-                const { error } = await supabase
-                    .from('ventures')
-                    .update({
-                        agreement_milestones: newMilestones
-                    })
-                    .eq('id', selectedVenture.id);
+                await api.updateVenture(selectedVenture.id, { agreement_milestones: newMilestones });
 
-                if (error) throw error;
                 setMilestones(newMilestones);
                 setVentures(prev => prev.map(v =>
                     v.id === selectedVenture.id ? { ...v, agreement_milestones: newMilestones } : v
@@ -356,15 +358,10 @@ export const VSMDashboard: React.FC = () => {
             : (userRole === 'committee' ? 'Contract Sent' : 'Agreement Sent');
 
         try {
-            const { error } = await supabase
-                .from('ventures')
-                .update({
-                    status: newStatus,
-                    internal_comments: internalComments // Ensure comments are saved
-                })
-                .eq('id', selectedVenture.id);
-
-            if (error) throw error;
+            await api.updateVenture(selectedVenture.id, {
+                status: newStatus,
+                internal_comments: internalComments
+            });
 
             setVentures(prev => prev.map(v =>
                 v.id === selectedVenture.id ? { ...v, status: newStatus, internal_comments: internalComments } : v
@@ -384,14 +381,7 @@ export const VSMDashboard: React.FC = () => {
         if (!selectedVenture) return;
 
         try {
-            const { error } = await supabase
-                .from('ventures')
-                .update({
-                    growth_target: editProfileData
-                })
-                .eq('id', selectedVenture.id);
-
-            if (error) throw error;
+            await api.updateVenture(selectedVenture.id, { growth_target: editProfileData });
 
             setVentures(prev => prev.map(v =>
                 v.id === selectedVenture.id ? { ...v, growth_target: editProfileData } : v
@@ -408,41 +398,37 @@ export const VSMDashboard: React.FC = () => {
     };
 
     const handleStreamStatusChange = async (stream: string, newStatus: string) => {
-        if (!selectedVenture) return;
+        if (!selectedVenture || !selectedVenture.needs) return;
 
-        // Clone existing needs or create empty array
-        const currentNeeds = selectedVenture.needs ? [...selectedVenture.needs] : [];
-        const existingIndex = currentNeeds.findIndex(n => n.stream === stream);
+        // Find the stream to update
+        const streamToUpdate = selectedVenture.needs.find(n => n.stream === stream);
 
-        if (existingIndex >= 0) {
-            currentNeeds[existingIndex] = { ...currentNeeds[existingIndex], status: newStatus };
-        } else {
-            currentNeeds.push({ stream, status: newStatus });
+        if (!streamToUpdate || !streamToUpdate.id) {
+            // Need ID to update logic
+            console.error("Stream ID missing, cannot update via API");
+            alert("Error: Missing stream ID. Please refresh.");
+            return;
         }
 
         try {
             // Optimistic Update
-            const updatedVenture = { ...selectedVenture, needs: currentNeeds };
+            const updatedNeeds = selectedVenture.needs.map(n =>
+                n.stream === stream ? { ...n, status: newStatus } : n
+            );
+
+            const updatedVenture = { ...selectedVenture, needs: updatedNeeds };
             setSelectedVenture(updatedVenture);
             setVentures(prev => prev.map(v => v.id === selectedVenture.id ? updatedVenture : v));
 
-            const { error } = await supabase
-                .from('ventures')
-                .update({ needs: currentNeeds })
-                .eq('id', selectedVenture.id);
+            // API Call
+            await api.updateStream(streamToUpdate.id, { status: newStatus });
 
-            if (error) throw error;
         } catch (error) {
             console.error("Error updating stream status:", error);
             alert("Failed to update status");
-            // Revert changes if needed (omitted for simplicity, but could refetch)
+            // Revert changes could go here
         }
     };
-
-
-
-
-
 
     return (
         <div className="flex gap-6 h-[calc(100vh-140px)]">
@@ -474,7 +460,7 @@ export const VSMDashboard: React.FC = () => {
                         ventures.map(v => (
                             <div
                                 key={v.id}
-                                onClick={() => { setSelectedVenture(v); setAnalysisResult(null); }}
+                                onClick={() => handleVentureSelect(v)}
                                 className={`p-4 cursor-pointer transition-colors hover:bg-gray-50 group ${selectedVenture?.id === v.id ? 'bg-red-50 border-r-2 border-red-500' : ''}`}
                             >
                                 <div className="flex justify-between items-start mb-1">
@@ -624,6 +610,75 @@ export const VSMDashboard: React.FC = () => {
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        {/* Section 2a: Program Recommendation & Assessment */}
+                        <div className="bg-white rounded-xl shadow-sm border border-orange-100 p-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                                    <Target className="w-5 h-5 text-orange-500" />
+                                    Program Assessment
+                                </h2>
+                                <Button
+                                    onClick={handleSave}
+                                    disabled={saving}
+                                    className="bg-orange-600 hover:bg-orange-700 text-white text-xs h-8"
+                                >
+                                    {saving ? (
+                                        <span className="flex items-center gap-1">
+                                            <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+                                        </span>
+                                    ) : (
+                                        <span className="flex items-center gap-1">
+                                            <Save className="w-3 h-3" /> Save Assessment
+                                        </span>
+                                    )}
+                                </Button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Recommended Program</label>
+                                    <select
+                                        className="w-full p-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                                        value={program}
+                                        onChange={(e) => setProgram(e.target.value)}
+                                    >
+                                        <option value="">Select a program...</option>
+                                        <option value="Accelerate Core">Accelerate Core</option>
+                                        <option value="Accelerate Select">Accelerate Select</option>
+                                        <option value="Accelerate Prime">Accelerate Prime</option>
+                                        <option value="Selfserve">Selfserve</option>
+                                    </select>
+                                    <p className="text-xs text-gray-400 mt-1">Select the most suitable program tier.</p>
+                                </div>
+                                {(userRole === 'committee' || userRole === 'venture_mgr') && (
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Venture Partner</label>
+                                        <select
+                                            className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none"
+                                            value={selectedPartner}
+                                            onChange={(e) => setSelectedPartner(e.target.value)}
+                                        >
+                                            <option value="">Assign Partner...</option>
+                                            <option value="Sanjay (Fintech)">Sanjay (Fintech)</option>
+                                            <option value="Vipul (Target/Agri)">Vipul (Target/Agri)</option>
+                                            <option value="Anjali (Health)">Anjali (Health)</option>
+                                            <option value="Rahul (Consumer)">Rahul (Consumer)</option>
+                                            <option value="Priya (SaaS)">Priya (SaaS)</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Internal Comments / Feedback</label>
+                                <textarea
+                                    className="w-full p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:outline-none h-24 resize-none"
+                                    placeholder="Add internal notes, concerns, or feedback for the committee..."
+                                    value={internalComments}
+                                    onChange={(e) => setInternalComments(e.target.value)}
+                                />
                             </div>
                         </div>
 
@@ -798,95 +853,19 @@ export const VSMDashboard: React.FC = () => {
                                             </div>
 
                                             {/* Follow-up Questions */}
-                                            <div>
-                                                <h4 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                                                    <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs">?</span>
-                                                    Follow-up Questions
-                                                </h4>
-                                                <ul className="space-y-2">
-                                                    {analysisResult.questions.map((q: string, i: number) => (
-                                                        <li key={i} className="flex gap-3 text-sm text-gray-600">
-                                                            <span className="text-gray-400 font-mono text-xs mt-0.5">0{i + 1}</span>
-                                                            {q}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
+                                            {analysisResult.questions && (
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-gray-900 mb-2">Interview Questions</h4>
+                                                    <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                                        {analysisResult.questions.map((q: string, i: number) => (
+                                                            <li key={i}>{q}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Section 5: Program Selection & Partner Assignment */}
-                        <div className="bg-gray-900 text-white p-6 rounded-xl shadow-lg">
-                            <div className="flex items-center justify-between mb-4">
-                                <div>
-                                    <h3 className="font-bold text-lg mb-1">Final Authorization</h3>
-                                    <p className="text-gray-400 text-sm">
-                                        {userRole === 'venture_mgr' ? 'Re-recommend if necessary.' : 'Confirm program and partnerships.'}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">
-                                        Select Program
-                                    </label>
-                                    <select
-                                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        value={program}
-                                        onChange={(e) => setProgram(e.target.value)}
-                                    >
-                                        <option value="Selfserve">Selfserve</option>
-                                        <option value="Accelerate Prime">Accelerate Prime</option>
-                                        <option value="Accelerate Core">Accelerate Core</option>
-                                        <option value="Accelerate Select">Accelerate Select</option>
-                                    </select>
-                                </div>
-
-                                {userRole === 'committee' && (
-                                    <div>
-                                        <label className="text-xs font-bold text-gray-500 uppercase mb-2 block flex items-center gap-2">
-                                            <UserPlus className="w-3 h-3 text-indigo-400" />
-                                            Assign Venture Partner
-                                        </label>
-                                        <select
-                                            className="w-full bg-gray-800 border border-indigo-900/50 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                            value={selectedPartner}
-                                            onChange={(e) => setSelectedPartner(e.target.value)}
-                                        >
-                                            <option value="">Select Partner...</option>
-                                            {VENTURE_PARTNERS.map(vp => (
-                                                <option key={vp} value={vp}>{vp}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">
-                                        Internal Comments
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                        placeholder="Add notes for records..."
-                                        value={internalComments}
-                                        onChange={(e) => setInternalComments(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex justify-end mt-4">
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="bg-red-600 hover:bg-red-700 text-white px-8 h-[46px]"
-                                >
-                                    {saving ? 'Saving...' : 'Confirm & Save'}
-                                </Button>
                             </div>
                         </div>
 
@@ -894,9 +873,6 @@ export const VSMDashboard: React.FC = () => {
                 )}
             </div>
 
-            <div className="hidden">
-                {/* Lucide icon cache/preload hack if needed */}
-            </div>
-        </div >
+        </div>
     );
 };

@@ -24,7 +24,7 @@ const growthDataSchema = z.object({
 // Commitment data schema
 const commitmentDataSchema = z.object({
     investment: z.string().optional(),
-    teamSize: z.number().int().positive().optional(),
+    teamSize: z.union([z.string(), z.number()]).optional(),
     progress: z.string().optional(),
 }).optional();
 
@@ -55,14 +55,30 @@ export const updateVentureSchema = z.object({
 });
 
 // Stream schemas
+const streamStatusSchema = z.enum([
+    // New statuses
+    'Not started',
+    'On track',
+    'Need some advice',
+    'Need deep support',
+    'Completed',
+    // Legacy mapping support
+    'No help needed',
+    'Working on it',
+    'Need guidance',
+    'At Risk',
+    'Done',
+    'Work in Progress'
+]);
+
 export const createStreamSchema = z.object({
     stream_name: z.string().min(1, 'Stream name is required'),
-    status: z.enum(['Done', 'Work in Progress', 'Need some advice']),
+    status: streamStatusSchema,
 });
 
 export const updateStreamSchema = z.object({
     stream_name: z.string().min(1).optional(),
-    status: z.enum(['Done', 'Work in Progress', 'Need some advice']).optional(),
+    status: streamStatusSchema.optional(),
 });
 
 // Query parameter schemas

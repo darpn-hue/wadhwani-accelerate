@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 import { ArrowLeft, CheckCircle, FileText, Loader2, PenTool } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { StatusSelect } from '../components/StatusSelect';
@@ -27,12 +27,8 @@ export const VentureWorkbench = () => {
                 s.id === streamId ? { ...s, status: newStatus } : s
             ));
 
-            const { error } = await supabase
-                .from('venture_streams')
-                .update({ status: newStatus })
-                .eq('id', streamId);
+            await api.updateStream(streamId, { status: newStatus });
 
-            if (error) throw error;
         } catch (error) {
             console.error('Error updating status:', error);
             alert('Failed to update status');
@@ -42,40 +38,14 @@ export const VentureWorkbench = () => {
 
     const fetchVentureData = async () => {
         try {
-            // 1. Fetch Venture Details
-            const { data: ventureData, error: ventureError } = await supabase
-                .from('ventures')
-                .select('*')
-                .eq('id', id)
-                .single();
+            if (!id) return;
+            // Fetch All Venture Data in one call
+            const { venture, streams, milestones, support_hours } = await api.getVenture(id);
 
-            if (ventureError) throw ventureError;
-            setVenture(ventureData);
-
-            // 2. Fetch Milestones
-            const { data: milestoneData } = await supabase
-                .from('venture_milestones')
-                .select('*')
-                .eq('venture_id', id);
-
-            setMilestones(milestoneData || []);
-
-            // 3. Fetch Streams
-            const { data: streamData } = await supabase
-                .from('venture_streams')
-                .select('*')
-                .eq('venture_id', id);
-
-            setStreams(streamData || []);
-
-            // 4. Fetch Support Hours
-            const { data: hoursData } = await supabase
-                .from('support_hours')
-                .select('*')
-                .eq('venture_id', id)
-                .single();
-
-            setSupportHours(hoursData);
+            setVenture(venture);
+            setStreams(streams || []);
+            setMilestones(milestones || []);
+            setSupportHours(support_hours);
 
         } catch (error) {
             console.error('Error fetching venture data:', error);
@@ -85,18 +55,13 @@ export const VentureWorkbench = () => {
     };
 
     const handleSignAgreement = async () => {
-        if (!accepted) return;
+        if (!accepted || !id) return;
         setSigning(true);
         try {
-            const { error } = await supabase
-                .from('ventures')
-                .update({
-                    agreement_status: 'Signed',
-                    agreement_accepted_at: new Date().toISOString()
-                })
-                .eq('id', id);
-
-            if (error) throw error;
+            await api.updateVenture(id, {
+                agreement_status: 'Signed',
+                agreement_accepted_at: new Date().toISOString()
+            });
 
             // Refresh
             fetchVentureData();
