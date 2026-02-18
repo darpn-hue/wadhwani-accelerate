@@ -1,8 +1,27 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
+import { FileText, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 export const Welcome: React.FC = () => {
     const navigate = useNavigate();
+    const { signIn } = useAuth();
+    const [applying, setApplying] = useState(false);
+
+    const handleApply = async () => {
+        setApplying(true);
+        try {
+            // Auto-login with demo entrepreneur account → go straight to application form
+            await signIn('rajesh@example.com', 'password');
+            navigate('/dashboard/new-application');
+        } catch {
+            // If auto-login fails, fall back to login page
+            navigate('/login?apply=true');
+        } finally {
+            setApplying(false);
+        }
+    };
 
     return (
         <div className="min-h-screen w-full bg-orange-50 flex items-center justify-center p-4">
@@ -19,25 +38,58 @@ export const Welcome: React.FC = () => {
                         <p className="text-orange-50 text-lg leading-relaxed max-w-md">
                             The Assisted Venture Growth Platform. From application to execution, we help you scale your venture with AI-driven insights and expert connections.
                         </p>
+
+                        {/* Apply CTA on left panel */}
+                        <button
+                            onClick={handleApply}
+                            disabled={applying}
+                            className="inline-flex items-center gap-2 text-white/80 hover:text-white text-sm font-medium transition-colors group disabled:opacity-60"
+                        >
+                            <FileText className="w-4 h-4" />
+                            Apply to the Accelerate Program
+                            <span className="group-hover:translate-x-1 transition-transform">→</span>
+                        </button>
                     </div>
                 </div>
 
                 {/* Right Panel */}
                 <div className="w-full md:w-1/2 p-12 flex flex-col justify-center bg-white">
-                    <div className="max-w-sm mx-auto w-full space-y-8">
-                        <div className="space-y-2">
+                    <div className="max-w-sm mx-auto w-full space-y-4">
+                        <div className="space-y-2 mb-4">
                             <h2 className="text-3xl font-bold text-gray-900">Welcome</h2>
                             <p className="text-gray-500">Sign in to access your dashboard.</p>
                         </div>
 
-                        <div className="space-y-4">
-                            <Button variant="primary" onClick={() => navigate('/login')}>
-                                Log In
-                            </Button>
-                            <Button variant="outline" onClick={() => navigate('/signup')}>
-                                Sign Up
-                            </Button>
+                        <Button variant="primary" onClick={() => navigate('/login')}>
+                            Log In
+                        </Button>
+                        <Button variant="outline" onClick={() => navigate('/signup')}>
+                            Sign Up
+                        </Button>
+
+                        {/* Divider */}
+                        <div className="relative py-2">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-gray-100" />
+                            </div>
+                            <div className="relative flex justify-center">
+                                <span className="bg-white px-3 text-xs text-gray-400 uppercase tracking-widest">New to the program?</span>
+                            </div>
                         </div>
+
+                        {/* Apply Button */}
+                        <button
+                            onClick={handleApply}
+                            disabled={applying}
+                            className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border-2 border-dashed border-orange-300 text-orange-600 font-semibold text-sm hover:bg-orange-50 hover:border-orange-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {applying ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <FileText className="w-4 h-4" />
+                            )}
+                            {applying ? 'Opening Application...' : 'Apply to Accelerate Program'}
+                        </button>
                     </div>
                 </div>
             </div>

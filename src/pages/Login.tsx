@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Rocket, Mail, Lock, ArrowRight, AlertCircle, Briefcase, Users } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const isApply = searchParams.get('apply') === 'true';
     const { signIn } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -21,8 +23,10 @@ export const Login: React.FC = () => {
         try {
             await signIn(email, password);
 
-            // Navigate based on email (simple role detection)
-            if (email.includes('admin') || email.includes('manager') || email.includes('committee')) {
+            // If coming from Apply button, go straight to the application form
+            if (isApply) {
+                navigate('/dashboard/new-application');
+            } else if (email.includes('admin') || email.includes('manager') || email.includes('committee')) {
                 navigate('/vsm/dashboard');
             } else {
                 navigate('/dashboard');
@@ -140,7 +144,7 @@ export const Login: React.FC = () => {
                             onClick={() => handleDemoLogin('entrepreneur')}
                             className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:border-red-600 hover:text-red-600 hover:bg-red-50 transition-all"
                         >
-                            Venture
+                            Business
                         </button>
                         <button
                             onClick={() => handleDemoLogin('success_mgr')}

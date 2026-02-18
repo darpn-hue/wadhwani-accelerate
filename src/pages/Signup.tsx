@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Rocket, Mail, Lock, ArrowRight, User, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 
 export const Signup: React.FC = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const isApply = searchParams.get('apply') === 'true';
     const { signUp } = useAuth();
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
@@ -20,8 +22,8 @@ export const Signup: React.FC = () => {
 
         try {
             await signUp(email, password, fullName);
-            // Navigate to dashboard after successful signup
-            navigate('/dashboard');
+            // If coming from Apply button, go straight to the application form
+            navigate(isApply ? '/dashboard/new-application' : '/dashboard');
         } catch (err: any) {
             setError(err.message || 'Signup failed. Please try again.');
         } finally {

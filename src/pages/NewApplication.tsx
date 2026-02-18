@@ -23,66 +23,66 @@ const WORKSTREAMS = [
     'Team',
 ];
 
-// Tooltip content per workstream — sourced from AI prompt doc
+// Tooltip content per workstream — warm, founder-friendly guidance
 const WORKSTREAM_INFO: Record<string, { tagline: string; deliverables: string[] }> = {
     Product: {
-        tagline: 'We\'ll help you build a clear product plan:',
+        tagline: 'This is about your product or service 👇',
         deliverables: [
-            'Write a Product Requirements Doc (PRD)',
-            'Design a 90-day pilot launch plan',
-            'Build a tiered pricing model',
-            'Define your product-market fit metrics',
-            'Create a 6-month feature roadmap',
+            'Think about what you\'re selling and to whom',
+            'Is your product/service ready, or still in development?',
+            'What makes it better or different from others?',
+            'Have you tested it with real customers yet?',
+            'Do you have a clear plan to grow or improve it?',
         ],
     },
     GTM: {
-        tagline: 'We\'ll help you reach the right customers:',
+        tagline: 'GTM = how you find & win customers 👇',
         deliverables: [
-            'Define your Ideal Customer Profile (ICP)',
-            'Build a channel-by-channel go-to-market plan',
-            'Write your core positioning & messaging',
-            'Create a sales playbook for your team',
-            'Model your sales pipeline & conversion rates',
+            'Think about how you currently get new customers',
+            'Do you sell directly, through agents, or online?',
+            'Is your sales process working, or feeling stuck?',
+            'Do you know exactly who your best customer is?',
+            'Do you have a plan to reach more customers this year?',
         ],
     },
     Funding: {
-        tagline: 'We\'ll help you get investor-ready:',
+        tagline: 'This is about your money & finances 👇',
         deliverables: [
-            'Build a 3-year financial model',
-            'Create an investor pitch deck',
-            'Calculate unit economics (CAC, LTV, margins)',
-            'Draft a fund utilization plan',
-            'Develop your valuation narrative',
+            'Think about whether your business is making money yet',
+            'Do you know your monthly income and expenses clearly?',
+            'Have you taken any loans or outside investment?',
+            'Do you need money to grow — and how much?',
+            'Do you have a basic financial plan for the next year?',
         ],
     },
     SupplyChain: {
-        tagline: 'We\'ll help you build a reliable supply chain:',
+        tagline: 'This is about getting & delivering your product 👇',
         deliverables: [
-            'Map and shortlist key vendors',
-            'Build a detailed cost sheet',
-            'Design your logistics & delivery model',
-            'Write quality control SOPs',
-            'Create a capacity scaling plan',
+            'Think about where you get your raw materials or stock',
+            'Is your supply reliable, or do you face shortages?',
+            'How do you deliver your product to customers?',
+            'Are your delivery costs under control?',
+            'Do you have trusted suppliers you can count on?',
         ],
     },
     Operations: {
-        tagline: 'We\'ll help you run a tight operation:',
+        tagline: 'This is about how your business runs daily 👇',
         deliverables: [
-            'Map your core business processes end-to-end',
-            'Build a KPI dashboard for weekly tracking',
-            'Write SOPs for your top 5 workflows',
-            'Identify cost reduction opportunities',
-            'Recommend a lean tech stack',
+            'Think about how smoothly your day-to-day work runs',
+            'Are there tasks that keep breaking down or causing delays?',
+            'Do you track your sales, costs, and output regularly?',
+            'Is your team clear on who does what?',
+            'Are you spending too much time on things that could be automated?',
         ],
     },
     Team: {
-        tagline: 'We\'ll help you build the right team:',
+        tagline: 'This is about the people in your business 👇',
         deliverables: [
-            'Design your org structure for the next 12 months',
-            'Write JDs for your 3 most critical hires',
-            'Build a phased hiring roadmap',
-            'Create an incentive & retention plan',
-            'Map capability gaps vs. growth needs',
+            'Think about who is helping you run the business today',
+            'Are there key roles you urgently need to fill?',
+            'Is your team motivated and clear on their goals?',
+            'Do you struggle to find or keep good people?',
+            'Do you have a plan to grow your team as the business grows?',
         ],
     },
 };
@@ -114,6 +114,10 @@ export const NewApplication: React.FC = () => {
         revenuePotential12m: '',
         requestedInvestmentLimit: '',
         incrementalHiring: '',
+        city: '',
+        state: '',
+        companyType: '',
+        referredBy: '',
 
         // Step 3: Status
         workstreamStatuses: WORKSTREAMS.map(w => ({ stream: w, status: 'Not started' })),
@@ -233,7 +237,7 @@ export const NewApplication: React.FC = () => {
     const stepTitles: Record<number, string> = {
         1: 'DESCRIBE YOUR CURRENT BUSINESS',
         2: 'TELL US ABOUT YOUR GROWTH VENTURE',
-        3: 'LET US KNOW WHERE YOU ARE IN THE JOURNEY',
+        3: 'WHICH AREAS DO YOU NEED SUPPORT WITH?',
         4: 'TELL US WHAT TYPE OF HELP YOU ARE LOOKING FOR',
     };
 
@@ -326,18 +330,18 @@ export const NewApplication: React.FC = () => {
                             />
                         </div>
 
-                        {/* Managing Director */}
+                        {/* Your Role in the Business */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Managing Director
+                                    Your Role in the Business
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
                             <input
                                 type="text"
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="Enter full name"
+                                placeholder="E.g., Owner, Managing Director, CEO..."
                                 value={formData.managingDirector}
                                 onChange={e => updateField('managingDirector', e.target.value)}
                             />
@@ -474,51 +478,83 @@ export const NewApplication: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Revenue + Investment row */}
+                        {/* Revenue Potential */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Projected Revenue Potential (12M)
+                            </label>
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.revenuePotential12m}
+                                onChange={e => updateField('revenuePotential12m', e.target.value)}
+                            >
+                                <option value="" disabled>Choose</option>
+                                <option value=">75Cr">&gt;75Cr</option>
+                                <option value="25Cr-75Cr">25Cr - 75Cr</option>
+                                <option value="5Cr-25Cr">5Cr - 25Cr</option>
+                                <option value="1-5Cr">1 - 5Cr</option>
+                                <option value="Pre-Revenue">Pre-Revenue</option>
+                            </select>
+                        </div>
+
+                        {/* City + State row */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Projected Revenue Potential (12M)
+                                    City
                                 </label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">$</span>
-                                    <input
-                                        type="number"
-                                        className="w-full rounded-xl border border-gray-200 bg-white pl-8 pr-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                        placeholder="0.00"
-                                        value={formData.revenuePotential12m}
-                                        onChange={e => updateField('revenuePotential12m', e.target.value)}
-                                    />
-                                </div>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                    placeholder="E.g., Mumbai"
+                                    value={formData.city}
+                                    onChange={e => updateField('city', e.target.value)}
+                                />
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Requested Investment Limit
+                                    State
                                 </label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">$</span>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-xl border border-gray-200 bg-white pl-8 pr-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                        placeholder="Maximum funding required"
-                                        value={formData.requestedInvestmentLimit}
-                                        onChange={e => updateField('requestedInvestmentLimit', e.target.value)}
-                                    />
-                                </div>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                    placeholder="E.g., Maharashtra"
+                                    value={formData.state}
+                                    onChange={e => updateField('state', e.target.value)}
+                                />
                             </div>
                         </div>
 
-                        {/* Incremental Hiring */}
+                        {/* Company Type */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Incremental Hiring Expectation
+                                Company Type
+                            </label>
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.companyType}
+                                onChange={e => updateField('companyType', e.target.value)}
+                            >
+                                <option value="" disabled>Select company type...</option>
+                                <option value="Manufacturing">Manufacturing</option>
+                                <option value="Services">Services</option>
+                                <option value="Consumer/D2C">Consumer / D2C</option>
+                                <option value="Trading">Trading</option>
+                                <option value="Startups">Startups</option>
+                            </select>
+                        </div>
+
+                        {/* Referred By Partner */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Referred By Which Partner
                             </label>
                             <input
                                 type="text"
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="E.g., 5–10 Engineering roles, 2 Sales..."
-                                value={formData.incrementalHiring}
-                                onChange={e => updateField('incrementalHiring', e.target.value)}
+                                placeholder="E.g., Wadhwani Foundation, SIDBI..."
+                                value={formData.referredBy}
+                                onChange={e => updateField('referredBy', e.target.value)}
                             />
                         </div>
                     </div>
