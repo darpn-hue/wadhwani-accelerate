@@ -50,22 +50,24 @@ function App() {
       <Router>
         <Routes>
           {/* Public Routes */}
+
           <Route path="/" element={
-            <div className="min-h-screen bg-orange-50 pt-16 font-sans">
+            <div className="min-h-screen pt-16 font-sans">
               <Header />
               <Welcome />
             </div>
           } />
           {/* ... existing public routes ... */}
 
+
           <Route path="/login" element={
-            <div className="min-h-screen bg-orange-50 pt-16 font-sans">
+            <div className="min-h-screen pt-16 font-sans">
               <Header />
               <Login />
             </div>
           } />
           <Route path="/signup" element={
-            <div className="min-h-screen bg-orange-50 pt-16 font-sans">
+            <div className="min-h-screen pt-16 font-sans">
               <Header />
               <Signup />
             </div>

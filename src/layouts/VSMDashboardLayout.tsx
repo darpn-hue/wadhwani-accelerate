@@ -24,8 +24,9 @@ export const VSMDashboardLayout: React.FC = () => {
     const roleLabel = getRoleLabel();
     const dashboardLabel = roleLabel === 'Selection Committee' ? 'Committee Dashboard' : `${roleLabel} Dashboard`;
 
+
     return (
-        <div className="min-h-screen bg-gray-50 flex">
+        <div className="min-h-screen bg-transparent flex">
             {/* Sidebar */}
             <aside className="w-64 bg-white border-r border-gray-200 fixed h-full z-10 flex flex-col justify-between">
                 <div className="p-6">

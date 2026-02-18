@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-peach-50 min-h-screen;
+        background-image: linear-gradient(to top, #fff7ed, #fff1f2);
+        /* Subtle Orange to Pinkish/White */
+    }
+}
+
+/* Custom Utilities for "Meetul" Theme */
+.glass-panel {
+    @apply bg-white/80 backdrop-blur-md border border-white/50 shadow-sm;
+}

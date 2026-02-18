@@ -1,28 +1,93 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, Check, Loader2, Mic } from 'lucide-react';
-import { Button } from '../components/ui/Button';
+import { ArrowLeft, ArrowRight, Check, Loader2, Mic, Info, CheckCircle2 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-
 import { StatusSelect } from '../components/StatusSelect';
 
-// Steps configuration
+// Steps configuration - matching the reference screens exactly
 const STEPS = [
-    { id: 1, title: 'Business' },
-    { id: 2, title: 'Venture' },
-    { id: 3, title: 'Status' },
-    { id: 4, title: 'Support' }
+    { id: 1, label: 'BUSINESS' },
+    { id: 2, label: 'VENTURE' },
+    { id: 3, label: 'STATUS' },
+    { id: 4, label: 'SUPPORT' },
 ];
 
-const STREAMS = [
-    'Money & Capital',
-    'Product & Strategy',
-    'People & Team',
+// Workstreams for Step 3 - matching the reference screen
+const WORKSTREAMS = [
+    'Product',
+    'GTM',
+    'Funding',
+    'SupplyChain',
     'Operations',
-    'Go-To-Market',
-    'Supply Chain'
+    'Team',
 ];
+
+// Tooltip content per workstream — sourced from AI prompt doc
+const WORKSTREAM_INFO: Record<string, { tagline: string; deliverables: string[] }> = {
+    Product: {
+        tagline: 'We\'ll help you build a clear product plan:',
+        deliverables: [
+            'Write a Product Requirements Doc (PRD)',
+            'Design a 90-day pilot launch plan',
+            'Build a tiered pricing model',
+            'Define your product-market fit metrics',
+            'Create a 6-month feature roadmap',
+        ],
+    },
+    GTM: {
+        tagline: 'We\'ll help you reach the right customers:',
+        deliverables: [
+            'Define your Ideal Customer Profile (ICP)',
+            'Build a channel-by-channel go-to-market plan',
+            'Write your core positioning & messaging',
+            'Create a sales playbook for your team',
+            'Model your sales pipeline & conversion rates',
+        ],
+    },
+    Funding: {
+        tagline: 'We\'ll help you get investor-ready:',
+        deliverables: [
+            'Build a 3-year financial model',
+            'Create an investor pitch deck',
+            'Calculate unit economics (CAC, LTV, margins)',
+            'Draft a fund utilization plan',
+            'Develop your valuation narrative',
+        ],
+    },
+    SupplyChain: {
+        tagline: 'We\'ll help you build a reliable supply chain:',
+        deliverables: [
+            'Map and shortlist key vendors',
+            'Build a detailed cost sheet',
+            'Design your logistics & delivery model',
+            'Write quality control SOPs',
+            'Create a capacity scaling plan',
+        ],
+    },
+    Operations: {
+        tagline: 'We\'ll help you run a tight operation:',
+        deliverables: [
+            'Map your core business processes end-to-end',
+            'Build a KPI dashboard for weekly tracking',
+            'Write SOPs for your top 5 workflows',
+            'Identify cost reduction opportunities',
+            'Recommend a lean tech stack',
+        ],
+    },
+    Team: {
+        tagline: 'We\'ll help you build the right team:',
+        deliverables: [
+            'Design your org structure for the next 12 months',
+            'Write JDs for your 3 most critical hires',
+            'Build a phased hiring roadmap',
+            'Create an incentive & retention plan',
+            'Map capability gaps vs. growth needs',
+        ],
+    },
+};
+
+type GrowthType = 'product' | 'segment' | 'geography';
 
 export const NewApplication: React.FC = () => {
     const navigate = useNavigate();
@@ -30,57 +95,50 @@ export const NewApplication: React.FC = () => {
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [selectedDescriptionTypes, setSelectedDescriptionTypes] = useState<('product' | 'segment' | 'geography')[]>([]);
+    const [selectedGrowthTypes, setSelectedGrowthTypes] = useState<GrowthType[]>([]);
 
-    // Form State
+    // Form State - matching all fields from the 4 screens
     const [formData, setFormData] = useState({
         // Step 1: Business
-        ventureName: '',
-        founderName: '',
+        businessName: '',
+        managingDirector: '',
         whatDoYouSell: '',
         whoDoYouSellTo: '',
-        regionsCovered: '',
-        city: '',
-        currentRevenue: '',
-        teamSize: '', // Moved from Step 2 to Step 1
+        whichRegions: '',
 
         // Step 2: Venture
-        growthFocus: '', // New field: Product, Segment, Geography
-        revenuePotential: '', // New field: revenue_potential_3y
-        investment: '',
-        incrementalHiring: '', // New field: incremental_hiring
-        // Detailed breakdowns for each focus area
+        growthFocus: [] as GrowthType[],
         focusProduct: '',
         focusSegment: '',
         focusGeography: '',
+        revenuePotential12m: '',
+        requestedInvestmentLimit: '',
+        incrementalHiring: '',
 
         // Step 3: Status
-        needs: STREAMS.map(s => ({ stream: s, status: 'No help needed' })), // Default updated
-        blockers: '', // New field
+        workstreamStatuses: WORKSTREAMS.map(w => ({ stream: w, status: 'Not started' })),
+        detailedStatusOverview: '',
 
         // Step 4: Support
-        supportRequest: '' // New field
+        specificSupportRequired: '',
     });
 
     const updateField = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
-    const updateNeedStatus = (streamIndex: number, status: string) => {
-        const newNeeds = [...formData.needs];
+    const updateWorkstreamStatus = (index: number, status: string) => {
+        const updated = [...formData.workstreamStatuses];
+        updated[index] = { ...updated[index], status };
+        setFormData(prev => ({ ...prev, workstreamStatuses: updated }));
+    };
 
-        // Check constraint if selecting "Need deep support"
-        if (status === 'Need deep support') {
-            const currentNeedHelpCount = newNeeds.filter(n => n.status === 'Need deep support').length;
-            // If we are changing TO 'Need deep support' and we already have 3 (and this one isn't currently it)
-            if (currentNeedHelpCount >= 3 && newNeeds[streamIndex].status !== 'Need deep support') {
-                alert('You can only select up to 3 "Need deep support" items.');
-                return;
-            }
-        }
-
-        newNeeds[streamIndex].status = status;
-        setFormData(prev => ({ ...prev, needs: newNeeds }));
+    const toggleGrowthType = (type: GrowthType) => {
+        const updated = selectedGrowthTypes.includes(type)
+            ? selectedGrowthTypes.filter(t => t !== type)
+            : [...selectedGrowthTypes, type];
+        setSelectedGrowthTypes(updated);
+        setFormData(prev => ({ ...prev, growthFocus: updated }));
     };
 
     const handleSubmit = async () => {
@@ -90,34 +148,29 @@ export const NewApplication: React.FC = () => {
         try {
             // 1. Create Venture via API
             const { venture } = await api.createVenture({
-                name: formData.ventureName,
-                founder_name: formData.founderName,
+                name: formData.businessName,
+                founder_name: formData.managingDirector,
                 program: 'Accelerate',
                 growth_current: {
                     product: formData.whatDoYouSell,
                     segment: formData.whoDoYouSellTo,
-                    geography: formData.regionsCovered,
-                    revenue: formData.currentRevenue,
+                    geography: formData.whichRegions,
                 },
-                growth_target: {
-                    product: formData.focusProduct,
-                    segment: formData.focusSegment,
-                    geography: formData.focusGeography,
-                },
-                growth_focus: formData.growthFocus,
+                growth_focus: formData.growthFocus.join(','),
                 commitment: {
-                    investment: formData.investment,
-                    teamSize: formData.teamSize,
+                    investment: formData.requestedInvestmentLimit,
+                    incrementalHiring: formData.incrementalHiring,
+                    revenuePotential: formData.revenuePotential12m,
                 },
-                blockers: formData.blockers,
-                support_request: formData.supportRequest,
+                blockers: formData.detailedStatusOverview,
+                support_request: formData.specificSupportRequired,
             });
 
             // 2. Create Venture Streams via API
-            for (const need of formData.needs) {
+            for (const ws of formData.workstreamStatuses) {
                 await api.createStream(venture.id, {
-                    stream_name: need.stream,
-                    status: need.status,
+                    stream_name: ws.stream,
+                    status: ws.status,
                 });
             }
 
@@ -142,11 +195,10 @@ export const NewApplication: React.FC = () => {
     };
 
     const handleBack = () => {
-        if (currentStep > 1) {
-            setCurrentStep(prev => prev - 1);
-        }
+        if (currentStep > 1) setCurrentStep(prev => prev - 1);
     };
 
+    // ─── Success Screen ───────────────────────────────────────────────────────
     if (isSubmitted) {
         return (
             <div className="max-w-xl mx-auto pt-10">
@@ -158,404 +210,461 @@ export const NewApplication: React.FC = () => {
                     <p className="text-gray-500">
                         Thank you for applying. Your venture details are now with our Venture Success Managers. We will review your application and get back to you shortly.
                     </p>
-
                     <div className="bg-blue-50 rounded-lg p-4 text-left text-sm space-y-2 text-blue-800">
-                        <div className="font-semibold">
-                            What happens next?
-                        </div>
+                        <div className="font-semibold">What happens next?</div>
                         <ul className="list-disc list-inside pl-1 space-y-1 text-blue-700">
                             <li>Initial Screening by Venture Success Manager</li>
                             <li>Committee Review (for advanced tiers)</li>
                             <li>Agreement Generation</li>
                         </ul>
                     </div>
-
-                    <Button onClick={() => navigate('/dashboard')} className="w-full">
+                    <button
+                        onClick={() => navigate('/dashboard')}
+                        className="w-full py-3.5 px-6 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                    >
                         Return to My Ventures
-                    </Button>
+                    </button>
                 </div>
             </div>
         );
     }
 
-    return (
-        <div className="max-w-4xl mx-auto space-y-8">
-            {/* Stepper */}
-            <div className="relative">
-                <div className="absolute top-1/2 left-0 w-full h-1 bg-gray-200 -z-10 -translate-y-1/2 rounded-full" />
-                <div
-                    className="absolute top-1/2 left-0 h-1 bg-red-600 -z-10 -translate-y-1/2 rounded-full transition-all duration-300"
-                    style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
-                />
+    // ─── Step Header ─────────────────────────────────────────────────────────
+    const stepTitles: Record<number, string> = {
+        1: 'DESCRIBE YOUR CURRENT BUSINESS',
+        2: 'TELL US ABOUT YOUR GROWTH VENTURE',
+        3: 'LET US KNOW WHERE YOU ARE IN THE JOURNEY',
+        4: 'TELL US WHAT TYPE OF HELP YOU ARE LOOKING FOR',
+    };
 
-                <div className="flex justify-between">
-                    {STEPS.map((step) => (
-                        <div key={step.id} className="flex flex-col items-center gap-2 bg-white px-2">
-                            <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${step.id <= currentStep
-                                    ? 'bg-red-600 text-white'
-                                    : 'bg-white border-2 border-gray-200 text-gray-400'
-                                    }`}
-                            >
-                                {step.id}
-                            </div>
-                            <span className={`text-xs font-medium ${step.id <= currentStep ? 'text-red-600' : 'text-gray-400'}`}>
-                                {step.title}
-                            </span>
-                        </div>
-                    ))}
+    return (
+        <div className="max-w-2xl mx-auto space-y-6 pb-16">
+
+            {/* ── Page Header (Step 2+ shows title + Save Draft) */}
+            {currentStep >= 2 && (
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tight uppercase">
+                        Accelerate Application
+                    </h1>
+                    <button className="px-5 py-2 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                        SAVE DRAFT
+                    </button>
+                </div>
+            )}
+
+            {/* ── Step Progress Bar ─────────────────────────────────────────── */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex items-center">
+                    {STEPS.map((step, idx) => {
+                        const isCompleted = step.id < currentStep;
+                        const isActive = step.id === currentStep;
+                        return (
+                            <React.Fragment key={step.id}>
+                                <div
+                                    className={`flex flex-col items-center gap-1.5 flex-1 py-2 px-3 rounded-xl transition-colors ${isActive ? 'bg-blue-50' : ''}`}
+                                >
+                                    <div
+                                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${isCompleted
+                                            ? 'bg-green-500 text-white'
+                                            : isActive
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-white border-2 border-gray-200 text-gray-400'
+                                            }`}
+                                    >
+                                        {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : step.id}
+                                    </div>
+                                    <span
+                                        className={`text-[10px] font-bold tracking-widest ${isCompleted
+                                            ? 'text-green-600'
+                                            : isActive
+                                                ? 'text-blue-600'
+                                                : 'text-gray-400'
+                                            }`}
+                                    >
+                                        {step.label}
+                                    </span>
+                                </div>
+                                {idx < STEPS.length - 1 && (
+                                    <div className="w-px h-8 bg-gray-200 mx-1" />
+                                )}
+                            </React.Fragment>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Wizard Content */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 min-h-[500px] flex flex-col">
+            {/* ── Step Content Card ─────────────────────────────────────────── */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
 
-                <div className="flex-1 space-y-8">
-                    {currentStep === 1 && (
-                        <>
-                            <div className="space-y-4">
-                                <h2 className="text-2xl font-bold text-gray-900">Business</h2>
+                {/* Step Header */}
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                        {currentStep}
+                    </div>
+                    <h2 className="text-base font-black text-gray-900 tracking-tight uppercase">
+                        {stepTitles[currentStep]}
+                    </h2>
+                </div>
+
+                {/* ── STEP 1: BUSINESS ─────────────────────────────────────── */}
+                {currentStep === 1 && (
+                    <div className="space-y-6">
+                        {/* Business Name */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Business Name
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
                             </div>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="Enter registered business name"
+                                value={formData.businessName}
+                                onChange={e => updateField('businessName', e.target.value)}
+                            />
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">REGISTERED COMPANY NAME</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., Punjab Exports Pvt Ltd"
-                                        value={formData.ventureName}
-                                        onChange={(e) => updateField('ventureName', e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">OWNER NAME</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., Rajesh Kumar"
-                                        value={formData.founderName}
-                                        onChange={(e) => updateField('founderName', e.target.value)}
-                                    />
-                                </div>
+                        {/* Managing Director */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Managing Director
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
                             </div>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="Enter full name"
+                                value={formData.managingDirector}
+                                onChange={e => updateField('managingDirector', e.target.value)}
+                            />
+                        </div>
 
-                            {/* Industry Field Removed as per new requirement */}
-
-
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">WHAT DO YOU SELL?</span>
-                                    <div className="relative">
-                                        <textarea
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-                                            placeholder="Describe your current products and services..."
-                                            value={formData.whatDoYouSell}
-                                            onChange={(e) => updateField('whatDoYouSell', e.target.value)}
-                                        />
-                                        <Mic className="absolute top-3 right-3 w-4 h-4 text-gray-400" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">WHO DO YOU SELL TO?</span>
-                                    <div className="relative">
-                                        <textarea
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-                                            placeholder="Describe your customer segments..."
-                                            value={formData.whoDoYouSellTo}
-                                            onChange={(e) => updateField('whoDoYouSellTo', e.target.value)}
-                                        />
-                                        <Mic className="absolute top-3 right-3 w-4 h-4 text-gray-400" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">WHICH REGIONS DO YOU SELL IN?</span>
-                                    <div className="relative">
-                                        <textarea
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
-                                            placeholder="Describe the geographies and regions you cover..."
-                                            value={formData.regionsCovered}
-                                            onChange={(e) => updateField('regionsCovered', e.target.value)}
-                                        />
-                                        <Mic className="absolute top-3 right-3 w-4 h-4 text-gray-400" />
-                                    </div>
-                                </div>
+                        {/* What do you sell? */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    What do you sell?
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
                             </div>
+                            <textarea
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
+                                placeholder="Describe your current products and services..."
+                                value={formData.whatDoYouSell}
+                                onChange={e => updateField('whatDoYouSell', e.target.value)}
+                            />
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">CITY OF OPERATION</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., Ludhiana"
-                                        value={formData.city}
-                                        onChange={(e) => updateField('city', e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">REVENUE (LAST 12 MONTHS)</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., ₹2 Crores"
-                                        value={formData.currentRevenue}
-                                        onChange={(e) => updateField('currentRevenue', e.target.value)}
-                                    />
-                                </div>
+                        {/* Who do you sell to? */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Who do you sell to?
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
                             </div>
+                            <textarea
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
+                                placeholder="Describe your customer segments..."
+                                value={formData.whoDoYouSellTo}
+                                onChange={e => updateField('whoDoYouSellTo', e.target.value)}
+                            />
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">FULL-TIME EMPLOYEES</label>
-                                    <input
-                                        type="text"
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        placeholder="e.g., 15 employees"
-                                        value={formData.teamSize}
-                                        onChange={(e) => updateField('teamSize', e.target.value)}
-                                    />
-                                </div>
+                        {/* Which regions do you sell to? */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Which regions do you sell to?
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
                             </div>
-                        </>
-                    )}
+                            <textarea
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
+                                placeholder="Describe the geographies and regions you cover..."
+                                value={formData.whichRegions}
+                                onChange={e => updateField('whichRegions', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                )}
 
-                    {currentStep === 2 && (
-                        <>
-                            <div className="space-y-4">
-                                <h2 className="text-2xl font-bold text-gray-900">Venture</h2>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <p className="text-base font-bold text-gray-900">Is the growth venture about a new product, new segment, or new geography?</p>
-                                </div>
-
-                                {/* Selection Buttons */}
-                                <div className="grid grid-cols-3 gap-4">
+                {/* ── STEP 2: VENTURE ──────────────────────────────────────── */}
+                {currentStep === 2 && (
+                    <div className="space-y-8">
+                        {/* Growth type question */}
+                        <div className="space-y-4">
+                            <p className="text-sm text-gray-600">
+                                Is your venture delivering a new product/service or targeting a new segment or looking to enter a new geography?
+                            </p>
+                            <div className="grid grid-cols-3 gap-3">
+                                {([
+                                    { key: 'product' as GrowthType, label: 'NEW PRODUCT/SERVICE' },
+                                    { key: 'segment' as GrowthType, label: 'NEW SEGMENT' },
+                                    { key: 'geography' as GrowthType, label: 'NEW GEOGRAPHY' },
+                                ]).map(({ key, label }) => (
                                     <button
+                                        key={key}
                                         type="button"
-                                        onClick={() => {
-                                            const newTypes = selectedDescriptionTypes.includes('product')
-                                                ? selectedDescriptionTypes.filter(t => t !== 'product')
-                                                : [...selectedDescriptionTypes, 'product'] as ('product' | 'segment' | 'geography')[];
-                                            setSelectedDescriptionTypes(newTypes);
-                                            updateField('growthFocus', newTypes.join(','));
-                                        }}
-                                        className={`px-4 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${selectedDescriptionTypes.includes('product')
-                                            ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2'
-                                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
+                                        onClick={() => toggleGrowthType(key)}
+                                        className={`px-4 py-3.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${selectedGrowthTypes.includes(key)
+                                            ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/25'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
                                             }`}
                                     >
-                                        New Product
+                                        {label}
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const newTypes = selectedDescriptionTypes.includes('segment')
-                                                ? selectedDescriptionTypes.filter(t => t !== 'segment')
-                                                : [...selectedDescriptionTypes, 'segment'] as ('product' | 'segment' | 'geography')[];
-                                            setSelectedDescriptionTypes(newTypes);
-                                            updateField('growthFocus', newTypes.join(','));
-                                        }}
-                                        className={`px-4 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${selectedDescriptionTypes.includes('segment')
-                                            ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2'
-                                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
-                                            }`}
-                                    >
-                                        New Segment
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const newTypes = selectedDescriptionTypes.includes('geography')
-                                                ? selectedDescriptionTypes.filter(t => t !== 'geography')
-                                                : [...selectedDescriptionTypes, 'geography'] as ('product' | 'segment' | 'geography')[];
-                                            setSelectedDescriptionTypes(newTypes);
-                                            updateField('growthFocus', newTypes.join(','));
-                                        }}
-                                        className={`px-4 py-3 rounded-lg text-sm font-bold uppercase tracking-wider transition-all ${selectedDescriptionTypes.includes('geography')
-                                            ? 'bg-blue-600 text-white shadow-md ring-2 ring-blue-600 ring-offset-2'
-                                            : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 hover:border-gray-300'
-                                            }`}
-                                    >
-                                        New Geography
-                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Conditional textareas — appear when toggle is selected */}
+                            {selectedGrowthTypes.includes('product') && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                            Describe the New Product/Service
+                                        </label>
+                                        <Mic className="w-4 h-4 text-gray-300" />
+                                    </div>
+                                    <textarea
+                                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
+                                        placeholder="Detail the technical or service innovation..."
+                                        value={formData.focusProduct}
+                                        onChange={e => updateField('focusProduct', e.target.value)}
+                                    />
                                 </div>
+                            )}
 
-                                {/* Conditional Text Areas */}
-                                {selectedDescriptionTypes.includes('product') && (
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">DESCRIBE THE NEW PRODUCT</span>
-                                            <Mic className="w-4 h-4 text-gray-300" />
-                                        </div>
-                                        <textarea
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] transition-shadow"
-                                            placeholder="Detail the technical or service innovation..."
-                                            value={formData.focusProduct}
-                                            onChange={(e) => updateField('focusProduct', e.target.value)}
-                                        />
+                            {selectedGrowthTypes.includes('segment') && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                            Describe the Target Segment
+                                        </label>
+                                        <Mic className="w-4 h-4 text-gray-300" />
                                     </div>
-                                )}
-
-                                {selectedDescriptionTypes.includes('segment') && (
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">DESCRIBE THE TARGET SEGMENT</span>
-                                            <Mic className="w-4 h-4 text-gray-300" />
-                                        </div>
-                                        <textarea
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] transition-shadow"
-                                            placeholder="Who is the ideal customer for this expansion?"
-                                            value={formData.focusSegment}
-                                            onChange={(e) => updateField('focusSegment', e.target.value)}
-                                        />
-                                    </div>
-                                )}
-
-                                {selectedDescriptionTypes.includes('geography') && (
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">DESCRIBE THE TARGET GEOGRAPHY</span>
-                                            <Mic className="w-4 h-4 text-gray-300" />
-                                        </div>
-                                        <textarea
-                                            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px] transition-shadow"
-                                            placeholder="List the specific regions or countries..."
-                                            value={formData.focusGeography}
-                                            onChange={(e) => updateField('focusGeography', e.target.value)}
-                                        />
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">PROJECTED REVENUE (YEAR 3)</label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g., ₹10 Crores"
-                                    value={formData.revenuePotential}
-                                    onChange={(e) => updateField('revenuePotential', e.target.value)}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">MINIMUM INVESTMENT REQUIRED</label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g., ₹50 Lakhs"
-                                    value={formData.investment}
-                                    onChange={(e) => updateField('investment', e.target.value)}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">INCREMENTAL HIRING NEEDED</label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g., 5-10 new employees"
-                                    value={formData.incrementalHiring}
-                                    onChange={(e) => updateField('incrementalHiring', e.target.value)}
-                                />
-                            </div>
-                        </>
-                    )}
-
-                    {currentStep === 3 && (
-                        <>
-                            <div className="flex flex-col gap-2">
-                                <div className="space-y-1">
-                                    <h2 className="text-2xl font-bold text-gray-900">Status & Needs</h2>
-                                    <p className="text-gray-500">For each stream, indicate the current status.</p>
+                                    <textarea
+                                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
+                                        placeholder="Who is the ideal customer for this expansion?"
+                                        value={formData.focusSegment}
+                                        onChange={e => updateField('focusSegment', e.target.value)}
+                                    />
                                 </div>
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                                    We will be able to provide deep hands-on support for 3 of the options below. Please select <strong>"Need deep support"</strong> for your top 3 priorities.
+                            )}
+
+                            {selectedGrowthTypes.includes('geography') && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                            Describe the Target Geography
+                                        </label>
+                                        <Mic className="w-4 h-4 text-gray-300" />
+                                    </div>
+                                    <textarea
+                                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
+                                        placeholder="List the specific regions or countries..."
+                                        value={formData.focusGeography}
+                                        onChange={e => updateField('focusGeography', e.target.value)}
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Revenue + Investment row */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Projected Revenue Potential (12M)
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">$</span>
+                                    <input
+                                        type="number"
+                                        className="w-full rounded-xl border border-gray-200 bg-white pl-8 pr-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                        placeholder="0.00"
+                                        value={formData.revenuePotential12m}
+                                        onChange={e => updateField('revenuePotential12m', e.target.value)}
+                                    />
                                 </div>
                             </div>
-
                             <div className="space-y-2">
-                                {STREAMS.map((stream, idx) => (
-                                    <div key={stream} className="flex items-start justify-between p-4 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                                        <span className="font-medium text-gray-900">{stream}</span>
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Requested Investment Limit
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">$</span>
+                                    <input
+                                        type="text"
+                                        className="w-full rounded-xl border border-gray-200 bg-white pl-8 pr-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                        placeholder="Maximum funding required"
+                                        value={formData.requestedInvestmentLimit}
+                                        onChange={e => updateField('requestedInvestmentLimit', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
-                                        <div className="w-[200px]">
-                                            <StatusSelect
-                                                status={formData.needs[idx].status}
-                                                onChange={(newStatus) => updateNeedStatus(idx, newStatus)}
-                                            />
+                        {/* Incremental Hiring */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Incremental Hiring Expectation
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="E.g., 5–10 Engineering roles, 2 Sales..."
+                                value={formData.incrementalHiring}
+                                onChange={e => updateField('incrementalHiring', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                )}
+
+                {/* ── STEP 3: STATUS ───────────────────────────────────────── */}
+                {currentStep === 3 && (
+                    <div className="space-y-6">
+                        {/* Workstream table */}
+                        <div>
+                            {/* Header row */}
+                            <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-100">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Workstream</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Current Status</span>
+                            </div>
+
+                            {/* Rows */}
+                            <div className="divide-y divide-gray-100">
+                                {formData.workstreamStatuses.map((ws, idx) => (
+                                    <div key={ws.stream} className="grid grid-cols-2 gap-4 items-center py-4">
+                                        {/* Workstream name + info tooltip */}
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-semibold text-gray-800">{ws.stream}</span>
+                                            <div className="relative group">
+                                                <Info className="w-3.5 h-3.5 text-gray-300 hover:text-blue-500 cursor-help transition-colors" />
+                                                {/* Tooltip */}
+                                                <div className="absolute left-5 top-1/2 -translate-y-1/2 z-50 hidden group-hover:block w-64 pointer-events-none">
+                                                    <div className="bg-gray-900 text-white rounded-xl p-3.5 shadow-2xl">
+                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-2">
+                                                            {WORKSTREAM_INFO[ws.stream]?.tagline}
+                                                        </p>
+                                                        <ul className="space-y-1.5">
+                                                            {WORKSTREAM_INFO[ws.stream]?.deliverables.map((d, i) => (
+                                                                <li key={i} className="flex items-start gap-2 text-xs text-gray-300">
+                                                                    <span className="text-blue-400 mt-0.5 flex-shrink-0">→</span>
+                                                                    {d}
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                        {/* Arrow */}
+                                                        <div className="absolute left-[-5px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-gray-900 rotate-45" />
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
+                                        <StatusSelect
+                                            status={ws.status}
+                                            onChange={newStatus => updateWorkstreamStatus(idx, newStatus)}
+                                        />
                                     </div>
                                 ))}
-
-                                <div className="pt-4 space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">SPECIFIC BLOCKERS OR CHALLENGES</label>
-                                    <textarea
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[80px]"
-                                        placeholder="e.g., Limited working capital, difficulty hiring skilled workers, supply chain delays..."
-                                        value={formData.blockers}
-                                        onChange={(e) => updateField('blockers', e.target.value)}
-                                    />
-                                </div>
                             </div>
-                        </>
-                    )}
+                        </div>
 
-                    {currentStep === 4 && (
-                        <>
-                            <div className="space-y-4">
-                                <h2 className="text-2xl font-bold text-gray-900">Support Request</h2>
-                                <p className="text-gray-500">How can the foundation specifically help you?</p>
+                        {/* Detailed Status Overview */}
+                        <div className="space-y-2 pt-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Detailed Status Overview
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
                             </div>
+                            <textarea
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[120px] resize-none"
+                                placeholder="Summarize key milestones reached and any current blockers..."
+                                value={formData.detailedStatusOverview}
+                                onChange={e => updateField('detailedStatusOverview', e.target.value)}
+                            />
+                        </div>
+                    </div>
+                )}
 
-                            <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">DETAILED SUPPORT REQUEST</label>
-                                    <textarea
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[200px]"
-                                        placeholder="e.g., Need help with financial modeling for investor pitch, require mentorship on scaling operations, seeking connections with potential distributors..."
-                                        value={formData.supportRequest}
-                                        onChange={(e) => updateField('supportRequest', e.target.value)}
-                                    />
-                                </div>
+                {/* ── STEP 4: SUPPORT ──────────────────────────────────────── */}
+                {currentStep === 4 && (
+                    <div className="space-y-6">
+                        {/* Specific Support Required */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Specific Support Required
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
                             </div>
-                        </>
-                    )}
-                </div>
+                            <textarea
+                                className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-4 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:border-solid focus:bg-white transition-all min-h-[200px] resize-none"
+                                placeholder="E.g., Mentorship in Go-to-Market, Networking with APAC hubs, Technical Advisory for cloud scaling..."
+                                value={formData.specificSupportRequired}
+                                onChange={e => updateField('specificSupportRequired', e.target.value)}
+                            />
+                        </div>
 
-                {/* Footer Actions */}
-                <div className="flex justify-between items-center pt-8 border-t border-gray-100 mt-8">
-                    <Button
-                        variant="ghost"
-                        onClick={handleBack}
-                        disabled={currentStep === 1 || isSubmitting}
-                        className="w-auto px-0 hover:bg-transparent hover:text-red-700 disabled:text-gray-300"
-                    >
-                        <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back
-                    </Button>
-
-                    <Button onClick={handleNext} className="w-auto" disabled={isSubmitting}>
-                        {isSubmitting ? (
-                            <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Submitting...
-                            </>
-                        ) : (
-                            <>
-                                {currentStep === 4 ? 'Submit Application' : 'Next'}
-                                {currentStep !== 4 && <ArrowRight className="w-4 h-4 ml-2" />}
-                            </>
-                        )}
-                    </Button>
-                </div>
-
+                        {/* Info box */}
+                        <div className="flex items-start gap-3 bg-blue-50 rounded-xl p-4">
+                            <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-blue-700">
+                                Be as specific as possible. Our ecosystem support model is designed to deploy targeted interventions based on the granularity of your requests here.
+                            </p>
+                        </div>
+                    </div>
+                )}
             </div>
-        </div >
+
+            {/* ── Footer Navigation ─────────────────────────────────────────── */}
+            <div className="flex items-center justify-between px-1">
+                {/* Previous Step */}
+                <button
+                    onClick={handleBack}
+                    disabled={currentStep === 1 || isSubmitting}
+                    className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    PREVIOUS STEP
+                </button>
+
+                {/* Cancel */}
+                <button
+                    onClick={() => navigate('/dashboard')}
+                    className="text-sm font-semibold text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                    CANCEL
+                </button>
+
+                {/* Next / Submit */}
+                <button
+                    onClick={handleNext}
+                    disabled={isSubmitting}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white text-sm font-bold uppercase tracking-wider hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-blue-500/25"
+                >
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Submitting...
+                        </>
+                    ) : currentStep === 4 ? (
+                        <>
+                            SUBMIT APPLICATION
+                            <Check className="w-4 h-4" />
+                        </>
+                    ) : (
+                        <>
+                            NEXT: {STEPS[currentStep].label}
+                            <ArrowRight className="w-4 h-4" />
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
     );
 };

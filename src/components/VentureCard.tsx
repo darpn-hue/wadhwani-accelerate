@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, LayoutGrid, FileText } from 'lucide-react';
+import { Eye, LayoutGrid } from 'lucide-react';
 import { Button } from './ui/Button';
 
 export interface Venture {
@@ -18,71 +18,76 @@ interface VentureCardProps {
     venture: Venture;
 }
 
+
 export const VentureCard: React.FC<VentureCardProps> = ({ venture }) => {
     const navigate = useNavigate();
 
     return (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-            <div className="flex justify-between items-start mb-4">
+        <div
+            onClick={() => navigate(`/dashboard/venture/${venture.id}`)}
+            className="group bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white hover:shadow-xl hover:shadow-brand-500/10 hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+        >
+            <div className="flex justify-between items-start mb-5">
                 <div className="flex gap-4">
-                    <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
+                    <div className="w-14 h-14 bg-gradient-to-br from-brand-50 to-peach-100 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform duration-300">
                         <RocketIcon />
                     </div>
                     <div>
-                        <h3 className="text-lg font-bold text-gray-900">{venture.name}</h3>
-                        <p className="text-sm text-gray-500 mt-1">{venture.description} • {venture.location}</p>
+                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-brand-600 transition-colors">{venture.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1 font-medium">{venture.description} • {venture.location}</p>
                     </div>
                 </div>
-                <div className={`px-3 py-1 rounded-full text-xs font-medium ${venture.status === 'Draft' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}`}>
+                <div className={`px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide shadow-sm ${venture.status === 'Draft' ? 'bg-orange-100 text-orange-700' : 'bg-brand-100 text-brand-700'}`}>
                     {venture.status === 'Draft' ? 'Draft' : 'Submitted'}
                 </div>
             </div>
 
             {/* Program Tag if applicable */}
-            <div className="flex items-center gap-2 mb-6">
-                <span className="text-xs text-gray-400">Selected:</span>
-                <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+            <div className="flex items-center gap-2 mb-6 ml-18 pl-1">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Program</span>
+                <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
                     {venture.program}
                 </span>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-6">
+            <div className="flex items-center gap-2 text-xs text-gray-400 mb-6 pl-1">
                 <ClockIcon />
-                <span>Submitted: {venture.submittedAt}</span>
+                <span className="font-medium">Submitted: {venture.submittedAt}</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-gray-50">
+            <div className="grid grid-cols-2 gap-3 pt-5 border-t border-gray-100">
                 {venture.agreement_status === 'Draft' || !venture.agreement_status ? (
                     <Button
-                        className="bg-gray-100 text-gray-400 cursor-not-allowed border-none"
+                        className="bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-100 shadow-none font-medium text-sm py-2.5"
                         disabled
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <LayoutGrid className="w-4 h-4 mr-2" />
                         Workbench Locked
                     </Button>
-                ) : venture.agreement_status === 'Sent' ? (
-                    <Button
-                        className="bg-blue-600 hover:bg-blue-700 text-white border-none animate-pulse"
-                        onClick={() => navigate(`/dashboard/venture/${venture.id}/workbench`)}
-                    >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Review Agreement
-                    </Button>
                 ) : (
                     <Button
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white border-none"
-                        onClick={() => navigate(`/dashboard/venture/${venture.id}/workbench`)}
+                        // Primary Action
+                        className="bg-gray-900 text-white hover:bg-black border-none text-sm py-2.5"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/dashboard/venture/${venture.id}/workbench`);
+                        }}
                     >
                         <LayoutGrid className="w-4 h-4 mr-2" />
-                        Launch Workbench
+                        Workbench
                     </Button>
                 )}
                 <Button
                     variant="outline"
-                    onClick={() => navigate(`/dashboard/venture/${venture.id}`)}
+                    className="text-sm py-2.5 border-gray-200 text-gray-600 hover:text-brand-600 hover:border-brand-200 hover:bg-brand-50/50"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/dashboard/venture/${venture.id}`);
+                    }}
                 >
                     <Eye className="w-4 h-4 mr-2" />
-                    Details
+                    View Details
                 </Button>
             </div>
         </div>

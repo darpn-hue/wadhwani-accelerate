@@ -9,7 +9,9 @@ export const DashboardLayout: React.FC = () => {
     const { signOut, user } = useAuth();
 
     return (
-        <div className="flex h-screen bg-gray-50">
+
+        <div className="flex h-screen bg-transparent">
+
             {/* Sidebar */}
             <aside className="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full z-10">
                 <div className="p-6 border-b border-gray-100">
