@@ -45,13 +45,37 @@ export const updateVentureSchema = z.object({
     name: z.string().min(2).optional(),
     founder_name: z.string().optional(),
     program: z.string().min(1).optional(),
-    status: z.enum(['draft', 'submitted', 'screening', 'committee_review', 'approved', 'rejected']).optional(),
+    status: z.string().optional(), // Allow any status string for flexibility
     growth_current: growthDataSchema,
     growth_target: growthDataSchema,
     growth_focus: z.string().optional(),
     commitment: commitmentDataSchema,
     blockers: z.string().optional(),
     support_request: z.string().optional(),
+
+    // VSM Fields
+    vsm_notes: z.string().optional(),
+    program_recommendation: z.string().optional(),
+    internal_comments: z.string().optional(),
+    ai_analysis: z.any().optional(), // JSONB field
+    vsm_reviewed_at: z.string().optional(), // Timestamp when VSM reviewed
+
+    // Committee Fields
+    venture_partner: z.string().optional(),
+    committee_feedback: z.string().optional(),
+    committee_decision: z.string().optional(),
+
+    // Agreement Fields
+    agreement_status: z.string().optional(),
+
+    // Additional fields from application form
+    city: z.string().optional(),
+    location: z.string().optional(),
+    revenue_12m: z.string().optional(),
+    revenue_potential_3y: z.string().optional(),
+    min_investment: z.string().optional(),
+    incremental_hiring: z.string().optional(),
+    full_time_employees: z.string().optional(),
 });
 
 // Stream schemas

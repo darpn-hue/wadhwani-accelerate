@@ -49,6 +49,7 @@ interface Venture {
     vsm_notes?: string;
     internal_comments?: string;
     ai_analysis?: any;
+    vsm_reviewed_at?: string; // Timestamp when VSM reviewed
 }
 
 const OtherDetailsSection: React.FC<{ vsmNotes: string; setVsmNotes: (v: string) => void }> = ({ vsmNotes, setVsmNotes }) => {
@@ -148,13 +149,45 @@ const AIInsightsSection: React.FC<{ selectedVenture: any; vsmNotes: string; anal
     </div>
 );
 
-const RecommendProgramSection: React.FC<{ program: string; setProgram: (v: string) => void; internalComments: string; setInternalComments: (v: string) => void; userRole: string | null; selectedPartner: string; setSelectedPartner: (v: string) => void; saving: boolean; onSave: () => void }> = ({ program, setProgram, internalComments, setInternalComments, userRole, selectedPartner, setSelectedPartner, saving, onSave }) => (
+const RecommendProgramSection: React.FC<{
+    program: string;
+    setProgram: (v: string) => void;
+    internalComments: string;
+    setInternalComments: (v: string) => void;
+    userRole: string | null;
+    selectedPartner: string;
+    setSelectedPartner: (v: string) => void;
+    saving: boolean;
+    onSave: () => void;
+    isAlreadySubmitted: boolean;
+    reviewedAt?: string;
+}> = ({ program, setProgram, internalComments, setInternalComments, userRole, selectedPartner, setSelectedPartner, saving, onSave, isAlreadySubmitted, reviewedAt }) => (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-gray-400" />
-            <span className="text-base font-bold text-gray-700">Recommend program</span>
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-gray-400" />
+                <span className="text-base font-bold text-gray-700">Recommend program</span>
+            </div>
+            {isAlreadySubmitted && reviewedAt && (
+                <span className="text-xs text-green-600 font-medium bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                    ✓ Reviewed {new Date(reviewedAt).toLocaleDateString()}
+                </span>
+            )}
         </div>
         <div className="p-6 space-y-5">
+            {isAlreadySubmitted && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                    <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-semibold text-blue-900">Already Reviewed</p>
+                        <p className="text-xs text-blue-700 mt-1">You can update your recommendation below if needed.</p>
+                    </div>
+                </div>
+            )}
             <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Select a program</label>
                 <select className="w-full p-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none text-sm text-gray-800" value={program} onChange={e => setProgram(e.target.value)}>
@@ -184,7 +217,7 @@ const RecommendProgramSection: React.FC<{ program: string; setProgram: (v: strin
             <div className="flex justify-end pt-2 border-t border-gray-100">
                 <button onClick={onSave} disabled={saving || !program} className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gray-900 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors shadow-md">
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Submit
+                    {isAlreadySubmitted ? 'Update Recommendation' : 'Submit'}
                 </button>
             </div>
         </div>
@@ -353,22 +386,39 @@ export const VSMDashboard: React.FC = () => {
                 vsm_notes: vsmNotes,
                 program_recommendation: program,
                 internal_comments: internalComments,
-                status: selectedVenture.status === 'Submitted' ? 'Under Review' : selectedVenture.status
+                status: 'Under Review', // Always update status to Under Review when VSM submits
+                ai_analysis: analysisResult || selectedVenture.ai_analysis, // Persist AI analysis if generated
+                vsm_reviewed_at: new Date().toISOString() // Track when VSM reviewed
             };
 
             if (userRole === 'committee') {
                 updatePayload.venture_partner = selectedPartner;
+                updatePayload.status = 'Committee Review'; // Committee changes status to Committee Review
             }
 
+            // Save to database
             await api.updateVenture(selectedVenture.id, updatePayload);
 
+            // Update local state to reflect changes immediately
             setVentures(prev => prev.map(v =>
                 v.id === selectedVenture.id
                     ? { ...v, ...updatePayload }
                     : v
             ));
 
-            alert('Data saved successfully!');
+            // Update the selected venture state as well
+            setSelectedVenture(prev => prev ? { ...prev, ...updatePayload } : null);
+
+            // Success feedback
+            alert('✓ Recommendation submitted successfully!\n\nStatus: ' + updatePayload.status + '\nProgram: ' + program);
+
+            // Navigate back to list after 1 second
+            setTimeout(() => {
+                setSelectedVenture(null);
+                // Refresh ventures list to ensure latest data from DB
+                fetchVentures();
+            }, 1000);
+
         } catch (error: any) {
             console.error('Error saving:', error);
             alert('Failed to save assessment: ' + error.message);
@@ -856,6 +906,8 @@ export const VSMDashboard: React.FC = () => {
                             setSelectedPartner={setSelectedPartner}
                             saving={saving}
                             onSave={handleSave}
+                            isAlreadySubmitted={!!selectedVenture?.program_recommendation}
+                            reviewedAt={(selectedVenture as any)?.vsm_reviewed_at}
                         />
                     </div>
                 </div>
