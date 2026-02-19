@@ -113,8 +113,7 @@ class ApiClient {
             .from('ventures')
             .select(`
                 *,
-                streams:stream_statuses(*),
-                needs:venture_needs(*)
+                streams:venture_streams(*)
             `)
             .eq('id', id)
             .single();
@@ -146,7 +145,7 @@ class ApiClient {
 
     async getVentureStreams(ventureId: string) {
         const { data, error } = await supabase
-            .from('stream_statuses')
+            .from('venture_streams')
             .select('*')
             .eq('venture_id', ventureId);
 
@@ -156,7 +155,7 @@ class ApiClient {
 
     async createStream(ventureId: string, data: { stream_name: string; status: string }) {
         const { data: stream, error } = await supabase
-            .from('stream_statuses')
+            .from('venture_streams')
             .insert({ ...data, venture_id: ventureId })
             .select()
             .single();
@@ -167,7 +166,7 @@ class ApiClient {
 
     async updateStream(id: string, data: { stream_name?: string; status?: string }) {
         const { data: stream, error } = await supabase
-            .from('stream_statuses')
+            .from('venture_streams')
             .update(data)
             .eq('id', id)
             .select()
@@ -179,7 +178,7 @@ class ApiClient {
 
     async deleteStream(id: string) {
         const { error } = await supabase
-            .from('stream_statuses')
+            .from('venture_streams')
             .delete()
             .eq('id', id);
 
@@ -189,7 +188,7 @@ class ApiClient {
     async submitVenture(id: string) {
         const { data, error } = await supabase
             .from('ventures')
-            .update({ status: 'applied', applied_at: new Date().toISOString() })
+            .update({ status: 'Submitted' })
             .eq('id', id)
             .select()
             .single();

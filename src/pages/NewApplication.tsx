@@ -173,11 +173,16 @@ export const NewApplication: React.FC = () => {
                     phone: formData.phone,
                 },
                 growth_focus: formData.growthFocus.join(','),
+                growth_target: {
+                    product: formData.focusProduct,
+                    segment: formData.focusSegment,
+                    geography: formData.focusGeography
+                },
                 commitment: {
                     investment: formData.requestedInvestmentLimit,
                     incrementalHiring: formData.incrementalHiring,
                     revenuePotential: formData.revenuePotential12m,
-                    lastYearRevenue: formData.lastYearRevenue, // Added this too as it was missing from payload but present in form
+                    lastYearRevenue: formData.lastYearRevenue,
                 },
                 blockers: '',
                 support_request: formData.specificSupportRequired,
@@ -474,7 +479,7 @@ export const NewApplication: React.FC = () => {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    What do you sell?
+                                    Product / Service
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -490,7 +495,7 @@ export const NewApplication: React.FC = () => {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Who do you sell to?
+                                    Customer Segment
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -506,7 +511,7 @@ export const NewApplication: React.FC = () => {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Which regions do you sell to?
+                                    Region
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -521,7 +526,7 @@ export const NewApplication: React.FC = () => {
                         {/* Number of Full time Employees */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Number of Full time Employees
+                                Current FTE
                             </label>
                             <select
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
@@ -655,7 +660,7 @@ export const NewApplication: React.FC = () => {
                         {/* Incremental Hiring */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                How many more People you want to allocate for this venture?
+                                How many more people do you plan to hire for this venture?
                             </label>
                             <input
                                 type="text"

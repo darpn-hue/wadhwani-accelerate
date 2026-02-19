@@ -3,7 +3,7 @@ import { Circle, CheckCircle2, Zap, ShieldAlert, ChevronDown, Loader2 } from 'lu
 
 export type StreamStatus = 'No help needed' | 'Working on it' | 'Need guidance' | 'Need deep support';
 
-const STATUS_CONFIG: Record<string, { icon: any, color: string, bg: string, border: string }> = {
+export const STATUS_CONFIG: Record<string, { icon: any, color: string, bg: string, border: string }> = {
     'No help needed': {
         icon: CheckCircle2,
         color: 'text-green-600',

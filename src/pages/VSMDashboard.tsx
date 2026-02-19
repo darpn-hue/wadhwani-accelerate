@@ -9,28 +9,32 @@ import {
     Sparkles,
     Target,
     TrendingUp,
-    Users
+    Users,
+    Circle
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
+import { STATUS_CONFIG } from '../components/StatusSelect';
 
 // Types
 interface Venture {
     id: string;
     name: string;
     description: string;
+    founder_name?: string; // Top level field
     // New Fields
     city: string;
     location?: string; // Added location
-    revenue_12m: string;
-    full_time_employees: string;
+    revenue_12m?: string;
+    full_time_employees?: string;
     growth_focus: string;
     revenue_potential_3y: string;
-    min_investment: string;
-    incremental_hiring: string;
+    min_investment?: string; // Optional as it comes from commitment
+    incremental_hiring?: string; // Optional as it comes from commitment
     // JSONB Fields
     growth_current: any; // { industry, product, segment, geography }
     growth_target: any; // { product, segment, geography } (descriptions)
+    commitment?: any; // Added commitment object
     needs: { id?: string; stream: string; status: string }[]; // mapped from streams
     status: string;
     program_recommendation?: string;
@@ -162,7 +166,29 @@ export const VSMDashboard: React.FC = () => {
             setInternalComments(freshVenture.internal_comments || '');
             setAnalysisResult(freshVenture.ai_analysis || null);
             setSelectedPartner(freshVenture.venture_partner || '');
+
+            // Ensure growth_target is initialized if missing (it is missing in current app flow)
             setEditProfileData(freshVenture.growth_target || {});
+
+            // START: Data Correction / Mapping for Display
+            // The dashboard expects top level fields for some items that are inside JSON in DB
+
+            // 1. Founder Name & Email (Top Level or Growth Current)
+            // freshVenture.founder_name is top level from API/DB
+
+            // 2. Financials (Inside commitment json)
+            if (freshVenture.commitment) {
+                freshVenture.revenue_12m = freshVenture.commitment.lastYearRevenue || '0';
+                freshVenture.revenue_potential_3y = freshVenture.commitment.revenuePotential || '0';
+                freshVenture.min_investment = freshVenture.commitment.investment || '0';
+                freshVenture.incremental_hiring = freshVenture.commitment.incrementalHiring || 'TBD';
+            }
+
+            // 3. Employees (Inside growth_current)
+            if (freshVenture.growth_current) {
+                freshVenture.full_time_employees = freshVenture.growth_current.employees || '0';
+            }
+            // END: Data Correction
 
         } catch (error) {
             console.error('Error fetching venture details:', error);
@@ -276,14 +302,34 @@ export const VSMDashboard: React.FC = () => {
 
     // Helper to get status color for streams
     const getStreamStatusColor = (streamName: string, venture: Venture) => {
-        const need = venture.needs.find(n => n.stream === streamName);
-        if (!need) return 'bg-gray-200'; // Default / Not assessed
-        switch (need.status) {
-            case 'Resolved': return 'bg-green-500';
-            case 'In Progress': return 'bg-yellow-400';
-            case 'Attention': return 'bg-red-500';
-            default: return 'bg-gray-200';
+        // Map display name to DB name if needed
+        const dbStreamName = streamName === 'Supply Chain' ? 'SupplyChain' : streamName;
+        const need = venture.needs.find(n => n.stream === dbStreamName);
+        if (!need) return 'bg-gray-200';
+
+        const legacyMapping: Record<string, string> = {
+            'Not started': 'Working on it',
+            'On track': 'No help needed',
+            'Need some advice': 'Need guidance',
+            'Completed': 'No help needed',
+            'Done': 'No help needed'
+        };
+
+        const mappedStatus = legacyMapping[need.status] || need.status;
+        const normalizedStatus = Object.keys(STATUS_CONFIG).find(
+            key => key.toLowerCase() === mappedStatus?.toLowerCase()
+        );
+
+        if (normalizedStatus && STATUS_CONFIG[normalizedStatus]) {
+            // Map text color class to background color class (e.g., text-green-600 -> bg-green-500)
+            const textColor = STATUS_CONFIG[normalizedStatus].color;
+            if (textColor.includes('green')) return 'bg-green-500';
+            if (textColor.includes('blue')) return 'bg-blue-500';
+            if (textColor.includes('amber')) return 'bg-amber-500';
+            if (textColor.includes('red')) return 'bg-red-500';
         }
+
+        return 'bg-gray-200';
     };
 
     const STREAMS = ['Product', 'GTM', 'Funding', 'Supply Chain', 'Operations', 'Team'];
@@ -348,10 +394,9 @@ export const VSMDashboard: React.FC = () => {
                                             {v.program_recommendation || 'PENDING'}
                                         </div>
 
-                                        {/* Founder/User Name */}
                                         <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
                                             <Users className="w-3.5 h-3.5" />
-                                            {v.growth_current?.founder_name || 'FOUNDER'}
+                                            {v.founder_name || v.growth_current?.founder_name || 'FOUNDER'}
                                         </div>
                                     </div>
                                 </div>
@@ -378,7 +423,7 @@ export const VSMDashboard: React.FC = () => {
                                 <div className="flex items-center gap-8 w-1/4 justify-end pl-4">
                                     <div className="text-right">
                                         <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block mb-1">Revenue (LTM)</span>
-                                        <div className="text-3xl font-bold text-gray-900">{v.revenue_12m || 'N/A'}</div>
+                                        <div className="text-3xl font-bold text-gray-900">{v.revenue_12m || v.commitment?.lastYearRevenue || v.commitment?.revenuePotential || 'N/A'}</div>
                                     </div>
 
                                     <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all transform group-hover:translate-x-1">
@@ -416,14 +461,14 @@ export const VSMDashboard: React.FC = () => {
                                 </div>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Funding Required</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Target Revenue (3Y)</span>
                                 <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
                                     <span className="text-sm text-gray-400">₹</span>
-                                    {selectedVenture.min_investment || '0'}
+                                    {selectedVenture.revenue_potential_3y || selectedVenture.commitment?.revenuePotential || '0'}
                                 </div>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Team Size</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current FTE</span>
                                 <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
                                     <Users className="w-4 h-4 text-gray-400" />
                                     {selectedVenture.full_time_employees || '0'}
@@ -457,7 +502,7 @@ export const VSMDashboard: React.FC = () => {
                                 <div className="grid grid-cols-3 gap-6">
                                     <div>
                                         <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Founder Concept / Name</span>
-                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.founder_name || user?.user_metadata?.full_name || 'N/A'}</div>
+                                        <div className="font-medium text-gray-900">{selectedVenture.founder_name || selectedVenture.growth_current?.founder_name || 'N/A'}</div>
                                     </div>
                                     <div>
                                         <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Role in Business</span>
@@ -465,7 +510,7 @@ export const VSMDashboard: React.FC = () => {
                                     </div>
                                     <div>
                                         <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Email</span>
-                                        <div className="font-medium text-gray-900">{user?.email || 'N/A'}</div>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.email || 'N/A'}</div>
                                     </div>
                                     <div>
                                         <span className="text-xs font-bold text-gray-400 uppercase block mb-1">City / State</span>
@@ -514,7 +559,7 @@ export const VSMDashboard: React.FC = () => {
                                     <div className={`p-6 ${isEditingProfile ? 'bg-blue-50/30' : 'bg-white'}`}>
                                         <div className="flex items-center gap-2 text-blue-900 font-bold border-b border-blue-100 pb-3 mb-4">
                                             <TrendingUp className="w-4 h-4 text-blue-600" />
-                                            New Venture <span className="text-blue-600/60 font-medium ml-1">({selectedVenture.growth_focus})</span>
+                                            New Venture
                                         </div>
                                         <div className="space-y-5">
                                             <div>
@@ -567,23 +612,80 @@ export const VSMDashboard: React.FC = () => {
                             </h2>
                             <div className="grid grid-cols-3 gap-4">
                                 {/* Row 1 */}
-                                {['Product', 'GTM', 'Funding'].map(stream => (
-                                    <div key={stream}>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">{stream}</span>
-                                        <div className="p-3 bg-gray-100 rounded-lg text-sm font-medium text-gray-500 flex items-center justify-center">
-                                            N/A (Non Editable)
+                                {/* Row 1 */}
+                                {['Product', 'GTM', 'Funding'].map(stream => {
+                                    const rawStatus = selectedVenture.needs.find((n: any) => n.stream === stream)?.status || 'N/A';
+
+                                    const legacyMapping: Record<string, string> = {
+                                        'Not started': 'Working on it',
+                                        'On track': 'No help needed',
+                                        'Need some advice': 'Need guidance',
+                                        'Completed': 'No help needed',
+                                        'Done': 'No help needed'
+                                    };
+
+                                    const mappedStatus = legacyMapping[rawStatus] || rawStatus;
+                                    const normalizedStatus = Object.keys(STATUS_CONFIG).find(
+                                        key => key.toLowerCase() === mappedStatus?.toLowerCase()
+                                    ) || 'N/A';
+
+                                    const config = STATUS_CONFIG[normalizedStatus] || {
+                                        icon: Circle,
+                                        color: 'text-gray-400',
+                                        bg: 'bg-gray-50',
+                                        border: 'border-gray-200'
+                                    };
+
+                                    const Icon = config.icon;
+
+                                    return (
+                                        <div key={stream}>
+                                            <span className="text-xs font-bold text-gray-400 uppercase block mb-1">{stream}</span>
+                                            <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 border ${config.bg} ${config.border} ${config.color}`}>
+                                                <Icon className="w-4 h-4" />
+                                                {normalizedStatus !== 'N/A' ? normalizedStatus : rawStatus}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 {/* Row 2 */}
-                                {['Supply Chain', 'Operations', 'Team'].map(stream => (
-                                    <div key={stream}>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">{stream}</span>
-                                        <div className="p-3 bg-gray-100 rounded-lg text-sm font-medium text-gray-500 flex items-center justify-center">
-                                            N/A (Non Editable)
+                                {['SupplyChain', 'Operations', 'Team'].map(stream => {
+                                    // Handle 'SupplyChain' vs 'Supply Chain' display mismatch if any, though form uses SupplyChain
+                                    const displayStream = stream === 'SupplyChain' ? 'Supply Chain' : stream;
+                                    const rawStatus = selectedVenture.needs.find((n: any) => n.stream === stream)?.status || 'N/A';
+
+                                    const legacyMapping: Record<string, string> = {
+                                        'Not started': 'Working on it',
+                                        'On track': 'No help needed',
+                                        'Need some advice': 'Need guidance',
+                                        'Completed': 'No help needed',
+                                        'Done': 'No help needed'
+                                    };
+
+                                    const mappedStatus = legacyMapping[rawStatus] || rawStatus;
+                                    const normalizedStatus = Object.keys(STATUS_CONFIG).find(
+                                        key => key.toLowerCase() === mappedStatus?.toLowerCase()
+                                    ) || 'N/A';
+
+                                    const config = STATUS_CONFIG[normalizedStatus] || {
+                                        icon: Circle,
+                                        color: 'text-gray-400',
+                                        bg: 'bg-gray-50',
+                                        border: 'border-gray-200'
+                                    };
+
+                                    const Icon = config.icon;
+
+                                    return (
+                                        <div key={stream}>
+                                            <span className="text-xs font-bold text-gray-400 uppercase block mb-1">{displayStream}</span>
+                                            <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 border ${config.bg} ${config.border} ${config.color}`}>
+                                                <Icon className="w-4 h-4" />
+                                                {normalizedStatus !== 'N/A' ? normalizedStatus : rawStatus}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
 

@@ -43,11 +43,11 @@ export const Login: React.FC = () => {
         let demoPassword = '';
 
         if (role === 'entrepreneur') {
-            demoEmail = 'rajesh@example.com';
+            demoEmail = 'vipul@wadhwani.com';
             demoPassword = 'password';
         } else if (role === 'success_mgr') {
-            demoEmail = 'meetul@admin.com';
-            demoPassword = 'admin123';
+            demoEmail = 'rajesh@wadhwani.com';
+            demoPassword = 'password';
         } else if (role === 'venture_mgr') {
             demoEmail = 'arun@admin.com';
             demoPassword = 'admin123';
@@ -170,8 +170,8 @@ export const Login: React.FC = () => {
                     </div>
 
                     <div className="text-center text-xs text-gray-400 space-y-1">
-                        <div>Venture: rajesh@example.com / password</div>
-                        <div>Screening Mgr: meetul@admin.com / admin123</div>
+                        <div>Venture: vipul@wadhwani.com / password</div>
+                        <div>Screening Mgr: rajesh@wadhwani.com / password</div>
                         <div>Venture Mgr: arun@admin.com / admin123</div>
                         <div>Committee: committee@admin.com / admin123</div>
                     </div>
