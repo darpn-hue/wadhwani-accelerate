@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { supabase } from './supabase';
 
 interface SignupData {
     email: string;
@@ -15,128 +15,172 @@ interface VentureQueryParams {
 }
 
 class ApiClient {
-    private getAuthHeader(): Record<string, string> {
-        const token = localStorage.getItem('access_token');
-        return token ? { Authorization: `Bearer ${token}` } : {};
-    }
-
-    private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const response = await fetch(`${API_URL}${endpoint}`, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...this.getAuthHeader(),
-                ...options.headers,
-            },
-        });
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({ error: 'Request failed' }));
-            throw new Error(error.error || `HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        // Handle 204 No Content
-        if (response.status === 204) {
-            return {} as T;
-        }
-
-        return response.json();
-    }
-
     // ============ AUTH ENDPOINTS ============
 
     async signup(data: SignupData) {
-        return this.request<{ user: any; session: any }>('/auth/signup', {
-            method: 'POST',
-            body: JSON.stringify(data),
+        const { data: authData, error } = await supabase.auth.signUp({
+            email: data.email,
+            password: data.password,
+            options: {
+                data: {
+                    full_name: data.full_name,
+                    role: data.role || 'entrepreneur',
+                },
+            },
         });
+
+        if (error) throw error;
+        return { user: authData.user, session: authData.session };
     }
 
     async login(email: string, password: string) {
-        return this.request<{ user: any; session: any }>('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password }),
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
         });
+
+        if (error) throw error;
+        return { user: data.user, session: data.session };
     }
 
     async logout() {
-        return this.request<{ message: string }>('/auth/logout', {
-            method: 'POST',
-        });
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
     }
 
     async getMe() {
-        return this.request<{ profile: any }>('/auth/me');
-    }
-
-    async refreshToken(refreshToken: string) {
-        return this.request<{ session: any }>('/auth/refresh', {
-            method: 'POST',
-            body: JSON.stringify({ refresh_token: refreshToken }),
-        });
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        return { user };
     }
 
     // ============ VENTURE ENDPOINTS ============
 
-    async getVentures(params?: VentureQueryParams) {
-        const query = params ? `?${new URLSearchParams(params as any).toString()}` : '';
-        return this.request<{ ventures: any[]; total: number }>(`/ventures${query}`);
+    async getVentures(params: VentureQueryParams = {}) {
+        let query = supabase
+            .from('ventures')
+            .select('*', { count: 'exact' });
+
+        if (params.status) {
+            query = query.eq('status', params.status);
+        }
+        if (params.program) {
+            query = query.eq('program', params.program);
+        }
+        if (params.limit) {
+            query = query.limit(params.limit);
+        }
+        if (params.offset) {
+            query = query.range(params.offset, params.offset + (params.limit || 10) - 1);
+        }
+
+        const { data, error, count } = await query;
+        if (error) throw error;
+        return { ventures: data, total: count };
     }
 
     async createVenture(data: any) {
-        return this.request<{ venture: any }>('/ventures', {
-            method: 'POST',
-            body: JSON.stringify(data),
-        });
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const ventureData = {
+            ...data,
+            profile_id: user.id,
+            status: 'draft' // Default status
+        };
+
+        const { data: venture, error } = await supabase
+            .from('ventures')
+            .insert(ventureData)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { venture };
     }
 
     async getVenture(id: string) {
-        return this.request<{ venture: any; streams?: any[]; milestones?: any[]; support_hours?: any }>(`/ventures/${id}`);
+        const { data, error } = await supabase
+            .from('ventures')
+            .select(`
+                *,
+                streams:stream_statuses(*),
+                needs:venture_needs(*)
+            `)
+            .eq('id', id)
+            .single();
+
+        if (error) throw error;
+        return { venture: data };
     }
 
     async updateVenture(id: string, data: any) {
-        return this.request<{ venture: any }>(`/ventures/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(data),
-        });
-    }
+        const { data: venture, error } = await supabase
+            .from('ventures')
+            .update(data)
+            .eq('id', id)
+            .select()
+            .single();
 
-    async deleteVenture(id: string) {
-        return this.request<void>(`/ventures/${id}`, {
-            method: 'DELETE',
-        });
-    }
-
-    async submitVenture(id: string) {
-        return this.request<{ message: string; venture: any }>(`/ventures/${id}/submit`, {
-            method: 'POST',
-        });
+        if (error) throw error;
+        return { venture };
     }
 
     // ============ STREAM ENDPOINTS ============
 
     async getVentureStreams(ventureId: string) {
-        return this.request<{ streams: any[] }>(`/ventures/${ventureId}/streams`);
+        const { data, error } = await supabase
+            .from('stream_statuses')
+            .select('*')
+            .eq('venture_id', ventureId);
+
+        if (error) throw error;
+        return { streams: data };
     }
 
     async createStream(ventureId: string, data: { stream_name: string; status: string }) {
-        return this.request<{ stream: any }>(`/ventures/${ventureId}/streams`, {
-            method: 'POST',
-            body: JSON.stringify(data),
-        });
+        const { data: stream, error } = await supabase
+            .from('stream_statuses')
+            .insert({ ...data, venture_id: ventureId })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { stream };
     }
 
-    async updateStream(streamId: string, data: { stream_name?: string; status?: string }) {
-        return this.request<{ stream: any }>(`/streams/${streamId}`, {
-            method: 'PUT',
-            body: JSON.stringify(data),
-        });
+    async updateStream(id: string, data: { stream_name?: string; status?: string }) {
+        const { data: stream, error } = await supabase
+            .from('stream_statuses')
+            .update(data)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { stream };
     }
 
-    async deleteStream(streamId: string) {
-        return this.request<void>(`/streams/${streamId}`, {
-            method: 'DELETE',
-        });
+    async deleteStream(id: string) {
+        const { error } = await supabase
+            .from('stream_statuses')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+    }
+
+    async submitVenture(id: string) {
+        const { data, error } = await supabase
+            .from('ventures')
+            .update({ status: 'applied', applied_at: new Date().toISOString() })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { venture: data };
     }
 }
 
