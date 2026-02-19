@@ -479,7 +479,7 @@ export const NewApplication: React.FC = () => {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Product / Service
+                                    What do you sell?
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -495,7 +495,7 @@ export const NewApplication: React.FC = () => {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Customer Segment
+                                    Who do you sell to?
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -511,7 +511,7 @@ export const NewApplication: React.FC = () => {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Region
+                                    Which regions do you sell to?
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -526,7 +526,7 @@ export const NewApplication: React.FC = () => {
                         {/* Number of Full time Employees */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Current FTE
+                                Number of Full time Employees
                             </label>
                             <select
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"

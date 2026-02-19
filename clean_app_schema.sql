@@ -20,21 +20,30 @@ CREATE TABLE public.ventures (
   user_id uuid REFERENCES auth.users NOT NULL,
   
   -- Core Identity
-  name text NOT NULL,             
-  program text,                   
-  status text DEFAULT 'draft',    
-  
+  name text NOT NULL,
+  program text,
+  status text DEFAULT 'draft',
+  location text,
+
   -- JSONB Columns for Form Step Data
-  -- These match the nested objects sent by the frontend API
-  growth_current jsonb,           
-  commitment jsonb,
-  
+  growth_current jsonb,           -- Step 1: current business (product, segment, geography, city, etc.)
+  commitment jsonb,               -- Step 2: revenue potential, investment, hiring
+  growth_target jsonb,            -- Step 2: new product/segment/geography targets
+  ai_analysis jsonb,              -- VSM: AI-generated strengths, risks, questions
+
   -- Simple Text Columns
-  growth_focus text,              
-  support_request text,           
-  founder_name text,              
-  description text,               
-  blockers text                   
+  growth_focus text,
+  support_request text,
+  founder_name text,
+  description text,
+  blockers text,
+
+  -- VSM / Screening Manager Fields
+  vsm_notes text,                 -- Call transcript / notes
+  internal_comments text,         -- Committee-only comments
+  program_recommendation text,    -- 'Accelerate Core', 'Accelerate Prime', etc.
+  venture_partner text,           -- Assigned venture partner
+  agreement_status text           -- 'Sent', 'Signed', etc.
 );
 
 -- 3. ENABLE SECURITY FOR VENTURES
@@ -46,9 +55,14 @@ CREATE POLICY "Users can view their own ventures" ON public.ventures FOR SELECT 
 CREATE POLICY "Users can insert their own ventures" ON public.ventures FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update their own ventures" ON public.ventures FOR UPDATE USING (auth.uid() = user_id);
 
--- Allow staff (anyone with these profile roles) to view/edit
+-- Allow staff to read ALL ventures (all 4 personas)
 CREATE POLICY "Staff can view all ventures" ON public.ventures FOR SELECT USING (
-  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('success_mgr', 'admin', 'committee_member'))
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('success_mgr', 'admin', 'committee_member', 'venture_mgr'))
+);
+
+-- Allow staff to UPDATE ventures — CRITICAL: without this VSM/Committee saves fail
+CREATE POLICY "Staff can update all ventures" ON public.ventures FOR UPDATE USING (
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('success_mgr', 'admin', 'committee_member', 'venture_mgr'))
 );
 
 

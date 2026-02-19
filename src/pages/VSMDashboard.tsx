@@ -10,7 +10,11 @@ import {
     Target,
     TrendingUp,
     Users,
-    Circle
+    Circle,
+    ChevronUp,
+    AlertTriangle,
+    HelpCircle,
+    Plus
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
@@ -46,6 +50,146 @@ interface Venture {
     internal_comments?: string;
     ai_analysis?: any;
 }
+
+const OtherDetailsSection: React.FC<{ vsmNotes: string; setVsmNotes: (v: string) => void }> = ({ vsmNotes, setVsmNotes }) => {
+    const [open, setOpen] = useState(false);
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors">
+                <span className="text-base font-bold text-gray-700">Other details <span className="text-gray-400 font-normal text-sm">(optional)</span></span>
+                <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-gray-400 transition-colors">
+                    {open ? <ChevronUp className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                </div>
+            </button>
+            {open && (
+                <div className="px-6 pb-6">
+                    <textarea
+                        className="w-full h-36 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none resize-none transition"
+                        placeholder="Paste your call transcript here or add notes from the call you had with the business…"
+                        value={vsmNotes}
+                        onChange={e => setVsmNotes(e.target.value)}
+                    />
+                </div>
+            )}
+        </div>
+    );
+};
+
+const AIInsightsSection: React.FC<{ selectedVenture: any; vsmNotes: string; analyzing: boolean; analysisResult: any; onRunAnalysis: () => void }> = ({ analyzing, analysisResult, onRunAnalysis }) => (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-indigo-500" />
+                <span className="text-base font-bold text-gray-700">Generate AI insights</span>
+            </div>
+            <button
+                onClick={onRunAnalysis}
+                disabled={analyzing}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold transition-colors shadow-sm"
+            >
+                {analyzing ? (<><Loader2 className="w-4 h-4 animate-spin" /> Analyzing…</>) : (<><Sparkles className="w-4 h-4" /> Generate insights</>)}
+            </button>
+        </div>
+        {!analysisResult && !analyzing && (
+            <div className="py-10 flex flex-col items-center gap-2 text-gray-300">
+                <Sparkles className="w-10 h-10" />
+                <p className="text-sm">Click “Generate insights” to analyse this venture</p>
+            </div>
+        )}
+        {analyzing && (
+            <div className="py-10 flex flex-col items-center gap-2 text-indigo-400">
+                <Loader2 className="w-8 h-8 animate-spin" />
+                <p className="text-sm font-medium">Analysing venture data…</p>
+            </div>
+        )}
+        {analysisResult && !analyzing && (
+            <div className="grid grid-cols-3 divide-x divide-gray-100">
+                <div className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <TrendingUp className="w-4 h-4 text-green-500" />
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Opportunity signal</span>
+                    </div>
+                    <ul className="space-y-2">
+                        {(analysisResult.strengths || []).map((s: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                                {s}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <AlertTriangle className="w-4 h-4 text-amber-500" />
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Risks</span>
+                    </div>
+                    <ul className="space-y-2">
+                        {(analysisResult.risks || []).map((r: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                                {r}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+                <div className="p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <HelpCircle className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Probing questions</span>
+                    </div>
+                    <ol className="space-y-2 list-decimal list-inside">
+                        {(analysisResult.questions || []).map((q: string, i: number) => (
+                            <li key={i} className="text-sm text-gray-700">{q}</li>
+                        ))}
+                    </ol>
+                </div>
+            </div>
+        )}
+    </div>
+);
+
+const RecommendProgramSection: React.FC<{ program: string; setProgram: (v: string) => void; internalComments: string; setInternalComments: (v: string) => void; userRole: string | null; selectedPartner: string; setSelectedPartner: (v: string) => void; saving: boolean; onSave: () => void }> = ({ program, setProgram, internalComments, setInternalComments, userRole, selectedPartner, setSelectedPartner, saving, onSave }) => (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+            <Briefcase className="w-5 h-5 text-gray-400" />
+            <span className="text-base font-bold text-gray-700">Recommend program</span>
+        </div>
+        <div className="p-6 space-y-5">
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Select a program</label>
+                <select className="w-full p-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none text-sm text-gray-800" value={program} onChange={e => setProgram(e.target.value)}>
+                    <option value="">Select a program…</option>
+                    <option value="Selfserve">Self-Serve (Digital Only)</option>
+                    <option value="Accelerate Core">Accelerate Core (Early Stage)</option>
+                    <option value="Accelerate Select">Accelerate Select (Growth Stage)</option>
+                    <option value="Accelerate Prime">Accelerate Prime (Scaling)</option>
+                    <option value="Reject">Not Suitable</option>
+                </select>
+            </div>
+            {userRole === 'committee' && (
+                <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Assign Venture Partner</label>
+                    <select className="w-full p-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm text-gray-800" value={selectedPartner} onChange={e => setSelectedPartner(e.target.value)}>
+                        <option value="">Select Partner…</option>
+                        <option value="Arun Kumar">Arun Kumar</option>
+                        <option value="Meetul Patel">Meetul Patel</option>
+                        <option value="Rajesh Jain">Rajesh Jain</option>
+                    </select>
+                </div>
+            )}
+            <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Comments</label>
+                <textarea className="w-full h-24 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none text-sm text-gray-700 placeholder:text-gray-400 resize-none" placeholder="Add any internal notes or comments…" value={internalComments} onChange={e => setInternalComments(e.target.value)} />
+            </div>
+            <div className="flex justify-end pt-2 border-t border-gray-100">
+                <button onClick={onSave} disabled={saving || !program} className="flex items-center gap-2 px-8 py-3 rounded-lg bg-gray-900 hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm transition-colors shadow-md">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div>
+);
 
 export const VSMDashboard: React.FC = () => {
     const { user } = useAuth();
@@ -123,10 +267,14 @@ export const VSMDashboard: React.FC = () => {
                 filteredData = filteredData.filter((v: any) => ['Accelerate Core', 'Accelerate Select'].includes(v.program_recommendation || ''));
             }
 
-            // Map data to ensure needs array exists
+            // Map data to ensure needs array exists and streams are mapped to needs
             const mappedVentures = filteredData.map((v: any) => ({
                 ...v,
-                needs: v.needs || []
+                needs: (v.streams || v.needs || []).map((s: any) => ({
+                    id: s.id,
+                    stream: s.stream_name,
+                    status: s.status
+                }))
             }));
 
             setVentures(mappedVentures);
@@ -145,6 +293,23 @@ export const VSMDashboard: React.FC = () => {
         // Fetch fresh details with streams
         try {
             const { venture: freshVenture, streams } = await api.getVenture(venture.id);
+
+            // ── Data Correction: extract fields from JSONB BEFORE building fullVenture ──
+
+            // Financials (inside commitment JSON)
+            if (freshVenture.commitment) {
+                freshVenture.revenue_12m = freshVenture.commitment.lastYearRevenue || '0';
+                freshVenture.revenue_potential_3y = freshVenture.commitment.revenuePotential || '0';
+                freshVenture.min_investment = freshVenture.commitment.investment || '0';
+                freshVenture.incremental_hiring = freshVenture.commitment.incrementalHiring || 'TBD';
+            }
+
+            // Employees (inside growth_current JSON)
+            if (freshVenture.growth_current) {
+                freshVenture.full_time_employees = freshVenture.growth_current.employees || '0';
+            }
+
+            // ─────────────────────────────────────────────────────────────────
 
             // Map streams to needs format
             const mappedNeeds = (streams || []).map((s: any) => ({
@@ -166,29 +331,7 @@ export const VSMDashboard: React.FC = () => {
             setInternalComments(freshVenture.internal_comments || '');
             setAnalysisResult(freshVenture.ai_analysis || null);
             setSelectedPartner(freshVenture.venture_partner || '');
-
-            // Ensure growth_target is initialized if missing (it is missing in current app flow)
             setEditProfileData(freshVenture.growth_target || {});
-
-            // START: Data Correction / Mapping for Display
-            // The dashboard expects top level fields for some items that are inside JSON in DB
-
-            // 1. Founder Name & Email (Top Level or Growth Current)
-            // freshVenture.founder_name is top level from API/DB
-
-            // 2. Financials (Inside commitment json)
-            if (freshVenture.commitment) {
-                freshVenture.revenue_12m = freshVenture.commitment.lastYearRevenue || '0';
-                freshVenture.revenue_potential_3y = freshVenture.commitment.revenuePotential || '0';
-                freshVenture.min_investment = freshVenture.commitment.investment || '0';
-                freshVenture.incremental_hiring = freshVenture.commitment.incrementalHiring || 'TBD';
-            }
-
-            // 3. Employees (Inside growth_current)
-            if (freshVenture.growth_current) {
-                freshVenture.full_time_employees = freshVenture.growth_current.employees || '0';
-            }
-            // END: Data Correction
 
         } catch (error) {
             console.error('Error fetching venture details:', error);
@@ -264,18 +407,18 @@ export const VSMDashboard: React.FC = () => {
                 ]
             };
 
+            // Show results in UI immediately regardless of DB save outcome
+            setAnalysisResult(newAnalysis);
+            setVentures(prev => prev.map(v =>
+                v.id === selectedVenture.id ? { ...v, ai_analysis: newAnalysis } : v
+            ));
+            setAnalyzing(false);
+
+            // Try to persist to DB in the background (non-blocking)
             try {
                 await api.updateVenture(selectedVenture.id, { ai_analysis: newAnalysis });
-
-                setAnalysisResult(newAnalysis);
-                setVentures(prev => prev.map(v =>
-                    v.id === selectedVenture.id ? { ...v, ai_analysis: newAnalysis } : v
-                ));
-
             } catch (err) {
-                console.error("Failed to save AI analysis", err);
-            } finally {
-                setAnalyzing(false);
+                console.warn("Could not persist AI analysis to DB (non-critical):", err);
             }
         }, 2000);
     };
@@ -689,152 +832,31 @@ export const VSMDashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Section 4: Recommendation & Submit */}
-                        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-8 sticky bottom-6">
-                            <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                <Briefcase className="w-5 h-5 text-gray-500" />
-                                Program Recommendation
-                            </h2>
 
-                            <div className="grid grid-cols-2 gap-8 mb-8">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Recommended Program</label>
-                                    <select
-                                        className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                                        value={program}
-                                        onChange={(e) => setProgram(e.target.value)}
-                                    >
-                                        <option value="">Select a Program...</option>
-                                        <option value="Accelerate Core">Accelerate Core (Early Stage)</option>
-                                        <option value="Accelerate Select">Accelerate Select (Growth Stage)</option>
-                                        <option value="Accelerate Prime">Accelerate Prime (Scaling)</option>
-                                        <option value="Selfserve">Self-Serve (Digital Only)</option>
-                                        <option value="Reject">Not Suitable</option>
-                                    </select>
-                                </div>
+                        {/* Section 5: Other Details (Optional, Collapsible) */}
+                        <OtherDetailsSection vsmNotes={vsmNotes} setVsmNotes={setVsmNotes} />
 
-                                {/* Show Venture Partner selection only for Committee */}
-                                {userRole === 'committee' && (
-                                    <div>
-                                        <label className="block text-sm font-bold text-gray-700 mb-2">Assign Venture Partner</label>
-                                        <select
-                                            className="w-full p-3 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                                            value={selectedPartner}
-                                            onChange={(e) => setSelectedPartner(e.target.value)}
-                                        >
-                                            <option value="">Select Partner...</option>
-                                            <option value="Arun Kumar">Arun Kumar</option>
-                                            <option value="Meetul Patel">Meetul Patel</option>
-                                            <option value="Rajesh Jain">Rajesh Jain</option>
-                                        </select>
-                                    </div>
-                                )}
-                            </div>
+                        {/* Section 6: Generate AI Insights CTA + Output */}
+                        <AIInsightsSection
+                            selectedVenture={selectedVenture}
+                            vsmNotes={vsmNotes}
+                            analyzing={analyzing}
+                            analysisResult={analysisResult}
+                            onRunAnalysis={runAIAnalysis}
+                        />
 
-                            <div className="mb-8">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Internal Comments (Committee Only)</label>
-                                <textarea
-                                    className="w-full p-4 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none h-24 resize-none"
-                                    placeholder="Add private comments for the selection committee..."
-                                    value={internalComments}
-                                    onChange={(e) => setInternalComments(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="flex justify-end pt-4 border-t border-gray-100">
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={saving || !program}
-                                    className="px-8 h-12 text-base shadow-xl shadow-gray-200 bg-gray-900 hover:bg-black text-white"
-                                >
-                                    {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-                                    Submit Assessment
-                                </Button>
-                            </div>
-                        </div>
-
-                        {/* [VENTURE MANAGER OR COMMITTEE] Deliverables Section */}
-                        {(selectedVenture.status === 'Contract Sent' || selectedVenture.status === 'Agreement Sent' || userRole === 'committee') && (userRole === 'venture_mgr' || userRole === 'committee') && (
-                            <div className="border border-purple-200 rounded-xl overflow-hidden bg-white shadow-sm ring-1 ring-purple-100">
-                                <div className="bg-purple-50/50 p-4 border-b border-purple-100">
-                                    <h3 className="font-bold text-purple-900">Program Deliverables (Advanced View)</h3>
-                                </div>
-                                <div className="p-4 text-center text-purple-400 text-sm">
-                                    Deliverables tracking is currently managed in the dedicated Tracker view.
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Section 4: AI Evaluation & Transcript (Advanced) */}
-                        <div className="border border-indigo-100 rounded-xl overflow-hidden bg-white shadow-sm">
-                            <div className="bg-indigo-50/50 p-4 border-b border-indigo-100 flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <Sparkles className="w-5 h-5 text-indigo-600" />
-                                    <h3 className="font-bold text-indigo-900">AI Venture Evaluation</h3>
-                                </div>
-                                <Button
-                                    onClick={runAIAnalysis}
-                                    disabled={analyzing}
-                                    className="text-xs h-8 bg-indigo-600 hover:bg-indigo-700 text-white w-auto px-4 py-2"
-                                    variant="primary"
-                                >
-                                    {analyzing ? 'Analyzing...' : 'Update Evaluation'}
-                                </Button>
-                            </div>
-
-                            <div className="grid grid-cols-3 divide-x divide-gray-100">
-                                {/* Left Column: Transcript Input */}
-                                <div className="col-span-1 p-4 bg-gray-50/50">
-                                    <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">
-                                        Call Transcript / Notes
-                                    </label>
-                                    <textarea
-                                        className="w-full h-[400px] rounded-lg border border-gray-300 p-3 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
-                                        placeholder="Paste transcript or type notes here to update context..."
-                                        value={vsmNotes}
-                                        onChange={(e) => setVsmNotes(e.target.value)}
-                                    />
-                                    <p className="text-xs text-gray-400 mt-2">
-                                        Updating notes and clicking "Update Evaluation" will refresh the AI summary.
-                                    </p>
-                                </div>
-
-                                {/* Right Column: AI Output */}
-                                <div className="col-span-2 p-6 space-y-6">
-                                    {!analysisResult ? (
-                                        <div className="h-full flex flex-col items-center justify-center text-gray-400 opacity-60">
-                                            <Sparkles className="w-12 h-12 mb-4 text-gray-300" />
-                                            <p>Run analysis to generate insights</p>
-                                        </div>
-                                    ) : (
-                                        <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-6">
-                                            {/* Summary */}
-                                            <div>
-                                                <h4 className="text-sm font-bold text-gray-900 mb-2">Executive Summary</h4>
-                                                <p className="text-sm text-gray-700 leading-relaxed bg-indigo-50 p-4 rounded-lg border border-indigo-100">
-                                                    {analysisResult.summary}
-                                                </p>
-                                                <p className="text-xs text-indigo-600 mt-2 italic font-medium">
-                                                    Generated with updated context.
-                                                </p>
-                                            </div>
-
-                                            {/* Follow-up Questions */}
-                                            {analysisResult.questions && (
-                                                <div>
-                                                    <h4 className="text-sm font-bold text-gray-900 mb-2">Interview Questions</h4>
-                                                    <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
-                                                        {analysisResult.questions.map((q: string, i: number) => (
-                                                            <li key={i}>{q}</li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        {/* Section 7: Recommend Program */}
+                        <RecommendProgramSection
+                            program={program}
+                            setProgram={setProgram}
+                            internalComments={internalComments}
+                            setInternalComments={setInternalComments}
+                            userRole={userRole}
+                            selectedPartner={selectedPartner}
+                            setSelectedPartner={setSelectedPartner}
+                            saving={saving}
+                            onSave={handleSave}
+                        />
                     </div>
                 </div>
             )}

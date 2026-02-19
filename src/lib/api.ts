@@ -67,7 +67,7 @@ class ApiClient {
     async getVentures(params: VentureQueryParams = {}) {
         let query = supabase
             .from('ventures')
-            .select('*', { count: 'exact' });
+            .select('*, streams:venture_streams(*)', { count: 'exact' });
 
         if (params.status) {
             query = query.eq('status', params.status);
