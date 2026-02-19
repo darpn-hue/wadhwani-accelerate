@@ -13,10 +13,14 @@ A comprehensive platform designed to help rural ventures scale by providing AI-d
 - **Agreement Management**: Digital review and signing of partnership agreements
 
 ### For Success Managers
-- **VSM Dashboard**: Unified view of all venture applications
-- **AI Analysis**: Automated "Deep Dive" insights generating summaries, red flags, and interview questions
-- **Triage & Notes**: Tools to evaluate and move ventures through the pipeline
-- **Screening Workflow**: Comprehensive review and recommendation system
+- **VSM Dashboard**: Unified view of all venture applications with filtering and sorting
+- **Program Recommendation**: Submit program recommendations (Self-Serve, Accelerate Core/Select/Prime, Reject)
+- **AI Deep Dive Analysis**: Automated insights generating summaries, red flags, and interview questions
+- **Call Notes & Transcripts**: "Other Details" section for VSM notes and call transcripts
+- **Internal Comments**: Committee-only internal notes for each venture
+- **Review State Tracking**: "Already Reviewed" indicators with update capability
+- **Status Management**: Automatic status change to "Under Review" on submission
+- **Review Timestamps**: Track when each venture was reviewed
 
 ### For Committee Members
 - **Committee Dashboard**: High-level view for decision making
@@ -103,6 +107,8 @@ cd wadhwani-assisted-platform
 3. Fill in project details and create
 
 #### Run the Database Schema
+
+**Step 1: Base Schema**
 1. Open your Supabase project dashboard
 2. Navigate to **SQL Editor**
 3. Click **"New Query"**
@@ -110,6 +116,22 @@ cd wadhwani-assisted-platform
 5. Paste into the SQL Editor
 6. Click **"Run"** (or press Cmd/Ctrl + Enter)
 7. Wait for "Success. No rows returned"
+
+**Step 2: VSM Dashboard Migration** (Required for Success Manager workflow)
+1. In SQL Editor, click **"New Query"**
+2. Copy the entire contents of [`vsm_schema_migration.sql`](./vsm_schema_migration.sql)
+3. Paste into the SQL Editor
+4. Click **"Run"**
+5. Verify you see success messages for each column added
+
+This adds critical columns for the VSM workflow:
+- `vsm_notes` - Call transcripts and screening notes
+- `program_recommendation` - Program tier selection
+- `internal_comments` - Internal notes
+- `ai_analysis` - AI-generated insights
+- `vsm_reviewed_at` - Review timestamp
+- `venture_partner` - Assigned partner
+- Additional application form fields
 
 #### Verify Tables Created
 Go to **Table Editor** and confirm you see:
@@ -256,13 +278,24 @@ Role: committee_member (auto-assigned because email contains "committee")
 
 ## 📚 Documentation
 
+### Setup & Configuration
 - **[Setup Guide](./FRESH_SUPABASE_SETUP_GUIDE.md)** - Detailed Supabase setup instructions
 - **[Quick Checklist](./QUICK_SETUP_CHECKLIST.md)** - Quick reference for setup steps
+- **[VSM Deployment Guide](./VSM_DEPLOYMENT_GUIDE.md)** - VSM Dashboard deployment and testing
 - **[Email Fix](./FIX_EMAIL_RATE_LIMIT.md)** - Fix email rate limit issues
+
+### Architecture & Features
+- **[State Persistence Summary](./STATE_PERSISTENCE_SUMMARY.md)** - VSM submission data flow and persistence
 - **[Architecture](./docs/ARCHITECTURE.md)** - System architecture overview
-- **[AI Prompts](./docs/ai-prompts/)** - AI prompt templates for consistent AI features
 - **[API Documentation](./docs/API.md)** - Complete API reference
+
+### Development
+- **[AI Prompts](./docs/ai-prompts/)** - AI prompt templates for consistent AI features
 - **[Contributing](./docs/CONTRIBUTING.md)** - Contribution guidelines
+
+### Database
+- **[Schema Migration](./vsm_schema_migration.sql)** - VSM Dashboard schema migration script
+- **[Base Schema](./fresh_supabase_setup.sql)** - Initial database setup
 
 ---
 
@@ -273,12 +306,38 @@ The platform uses the following main tables:
 | Table | Purpose |
 |-------|---------|
 | `profiles` | User profiles with role-based access (entrepreneur, success_mgr, committee_member) |
-| `ventures` | Main venture applications with all form data |
+| `ventures` | Main venture applications with all form data + VSM workflow fields |
 | `programs` | Available programs (Accelerate Prime, Core, Select, Ignite, Liftoff) |
 | `venture_milestones` | Milestone tracking for each venture |
-| `venture_streams` | Stream status (Money & Capital, Product & Strategy, etc.) |
+| `venture_streams` | Stream status (Product, GTM, Funding, Supply Chain, Operations, Team) |
 | `support_hours` | Support hour allocation and tracking |
 | `venture_history` | Audit trail of status changes |
+
+### Ventures Table - Key Fields
+
+**Application Data:**
+- `name`, `description` - Basic venture info
+- `founder_name`, `city`, `location` - Founder details
+- `revenue_12m`, `full_time_employees` - Current metrics
+- `revenue_potential_3y`, `incremental_hiring` - Growth projections
+- `growth_current`, `growth_target` (JSONB) - Current and target growth profiles
+- `commitment` (JSONB) - Investment and commitment details
+
+**VSM Workflow:**
+- `vsm_notes` - Call transcripts and screening notes
+- `program_recommendation` - Recommended program tier
+- `internal_comments` - Internal committee notes
+- `ai_analysis` (JSONB) - AI-generated strengths, risks, questions
+- `vsm_reviewed_at` - Timestamp when VSM reviewed
+- `status` - Application status (Submitted, Under Review, etc.)
+
+**Committee Workflow:**
+- `venture_partner` - Assigned venture partner
+- `committee_feedback` - Committee decision notes
+- `committee_decision` - Final decision
+
+**Agreement Workflow:**
+- `agreement_status` - Status of agreement (Draft, Sent, Signed)
 
 All tables have Row Level Security (RLS) policies configured for proper access control.
 
@@ -316,18 +375,42 @@ All tables have Row Level Security (RLS) policies configured for proper access c
 
 ## 🐛 Troubleshooting
 
-### Email Rate Limit Exceeded
+### VSM Dashboard Issues
+
+**"Auth session missing" Error**
+- Clear browser storage: `localStorage.clear()` in console
+- Log out and log back in
+- Verify you're using an admin email (contains "admin")
+
+**"Cannot coerce to single JSON object" Error**
+- Check RLS policies allow success_mgr to update ventures
+- Run: `SELECT * FROM pg_policies WHERE tablename = 'ventures'`
+- Ensure "Staff can update any venture" policy exists
+
+**"Column does not exist" Error**
+- Run the VSM schema migration: `vsm_schema_migration.sql`
+- Verify columns exist: See [check_schema.sql](./check_schema.sql)
+
+**Submit Button Not Working**
+- Check browser console for errors
+- Verify program is selected (required field)
+- Ensure you're logged in with proper role
+
+### General Issues
+
+**Email Rate Limit Exceeded**
 See [FIX_EMAIL_RATE_LIMIT.md](./FIX_EMAIL_RATE_LIMIT.md) for solutions.
 
-### Can't Connect to Supabase
+**Can't Connect to Supabase**
 - Verify `.env` file has correct URL and key
 - Restart dev server (`npm run dev`)
 - Clear browser cache
 
-### SQL Errors
-- Ensure you copied the entire `fresh_supabase_setup.sql` file
+**SQL Errors**
+- Ensure you copied the entire SQL file
 - Run in Supabase SQL Editor, not terminal
 - Check for any existing tables that might conflict
+- Run migrations in order: `fresh_supabase_setup.sql` → `vsm_schema_migration.sql`
 
 ---
 
@@ -345,14 +428,38 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🎯 What's New
 
-### Latest Updates
+### Latest Updates (v2.0 - February 2026)
+
+**🎉 VSM Dashboard - Complete Submission Workflow**
+- ✅ Program recommendation submission (Self-Serve, Accelerate Core/Select/Prime, Reject)
+- ✅ "Already Reviewed" state indicator with update capability
+- ✅ Review timestamp tracking (`vsm_reviewed_at`)
+- ✅ Auto-status change to "Under Review" on submission
+- ✅ Call notes and transcripts ("Other Details" section)
+- ✅ Internal committee comments
+- ✅ AI analysis persistence (strengths, risks, probing questions)
+- ✅ Enhanced error handling and debugging
+- ✅ Session persistence fixes for auth
+- ✅ Complete data flow from submission to Committee Dashboard
+
+**Database & Backend**
+- ✅ Comprehensive VSM schema migration script (`vsm_schema_migration.sql`)
+- ✅ Updated backend validation schemas for all VSM fields
+- ✅ Enhanced Supabase client configuration for session persistence
+- ✅ Improved error logging in API client
+
+**Documentation**
+- ✅ VSM Deployment Guide with step-by-step instructions
+- ✅ State Persistence Summary documenting complete data flow
+- ✅ Database schema documentation with all VSM fields
+
+### Previous Updates
 - ✅ Complete 4-step venture application form
 - ✅ Growth focus tracking (Product/Segment/Geography)
 - ✅ Founder name field added
 - ✅ Fresh Supabase setup with consolidated schema
 - ✅ Comprehensive RLS policies
 - ✅ Auto-role assignment based on email
-- ✅ Complete VSM and Committee workflows
 
 ---
 
