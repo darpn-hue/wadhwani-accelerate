@@ -96,6 +96,7 @@ export const NewApplication: React.FC = () => {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedGrowthTypes, setSelectedGrowthTypes] = useState<GrowthType[]>([]);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     // Form State - matching all fields from the 4 screens
     const [formData, setFormData] = useState({
@@ -131,8 +132,41 @@ export const NewApplication: React.FC = () => {
         specificSupportRequired: '',
     });
 
+    const validateField = (field: string, value: string): string => {
+        switch (field) {
+            case 'phone':
+                // Remove spaces, dashes, and +91 prefix for validation
+                const cleanPhone = value.replace(/[\s\-+]/g, '');
+                const phoneDigits = cleanPhone.replace(/^91/, ''); // Remove country code if present
+                if (value && !/^\d{10}$/.test(phoneDigits)) {
+                    return 'Phone number must be 10 digits';
+                }
+                break;
+            case 'email':
+                if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    return 'Please enter a valid email address';
+                }
+                break;
+            case 'incrementalHiring':
+                if (value && !/^\d+$/.test(value)) {
+                    return 'Please enter a valid number';
+                }
+                break;
+        }
+        return '';
+    };
+
     const updateField = (field: string, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
+
+        // Validate on change for specific fields
+        if (['phone', 'email', 'incrementalHiring'].includes(field)) {
+            const error = validateField(field, value);
+            setValidationErrors(prev => ({
+                ...prev,
+                [field]: error
+            }));
+        }
     };
 
     const updateWorkstreamStatus = (index: number, status: string) => {
@@ -209,6 +243,14 @@ export const NewApplication: React.FC = () => {
     };
 
     const handleNext = () => {
+        // Validate current step before proceeding
+        const hasErrors = Object.values(validationErrors).some(error => error !== '');
+
+        if (hasErrors) {
+            alert('Please fix the validation errors before proceeding.');
+            return;
+        }
+
         if (currentStep < 4) {
             setCurrentStep(prev => prev + 1);
         } else {
@@ -407,11 +449,16 @@ export const NewApplication: React.FC = () => {
                             </label>
                             <input
                                 type="email"
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                className={`w-full rounded-xl border ${validationErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'} px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all`}
                                 placeholder="E.g., yourname@company.com"
                                 value={formData.email}
                                 onChange={e => updateField('email', e.target.value)}
                             />
+                            {validationErrors.email && (
+                                <p className="text-xs text-red-600 flex items-center gap-1">
+                                    <span>⚠</span> {validationErrors.email}
+                                </p>
+                            )}
                         </div>
 
                         {/* Phone Number */}
@@ -421,11 +468,16 @@ export const NewApplication: React.FC = () => {
                             </label>
                             <input
                                 type="tel"
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                className={`w-full rounded-xl border ${validationErrors.phone ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'} px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all`}
                                 placeholder="E.g., +91 98765 43210"
                                 value={formData.phone}
                                 onChange={e => updateField('phone', e.target.value)}
                             />
+                            {validationErrors.phone && (
+                                <p className="text-xs text-red-600 flex items-center gap-1">
+                                    <span>⚠</span> {validationErrors.phone}
+                                </p>
+                            )}
                         </div>
 
                         {/* City + State row */}
@@ -664,11 +716,16 @@ export const NewApplication: React.FC = () => {
                             </label>
                             <input
                                 type="text"
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="E.g., 2 developers, 1 sales lead..."
+                                className={`w-full rounded-xl border ${validationErrors.incrementalHiring ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'} px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all`}
+                                placeholder="E.g., 5"
                                 value={formData.incrementalHiring}
                                 onChange={e => updateField('incrementalHiring', e.target.value)}
                             />
+                            {validationErrors.incrementalHiring && (
+                                <p className="text-xs text-red-600 flex items-center gap-1">
+                                    <span>⚠</span> {validationErrors.incrementalHiring}
+                                </p>
+                            )}
                         </div>
 
                     </div>
