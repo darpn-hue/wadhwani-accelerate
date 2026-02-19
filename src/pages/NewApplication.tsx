@@ -117,6 +117,7 @@ export const NewApplication: React.FC = () => {
         city: '',
         state: '',
         email: '',
+        role: '', // Added role field
         lastYearRevenue: '',
         companyType: '',
         referredBy: '',
@@ -161,12 +162,19 @@ export const NewApplication: React.FC = () => {
                     product: formData.whatDoYouSell,
                     segment: formData.whoDoYouSellTo,
                     geography: formData.whichRegions,
+                    city: formData.city,
+                    state: formData.state,
+                    business_type: formData.companyType,
+                    referred_by: formData.referredBy,
+                    employees: formData.numberOfEmployees,
+                    role: formData.role,
                 },
                 growth_focus: formData.growthFocus.join(','),
                 commitment: {
                     investment: formData.requestedInvestmentLimit,
                     incrementalHiring: formData.incrementalHiring,
                     revenuePotential: formData.revenuePotential12m,
+                    lastYearRevenue: formData.lastYearRevenue, // Added this too as it was missing from payload but present in form
                 },
                 blockers: '',
                 support_request: formData.specificSupportRequired,
@@ -332,20 +340,36 @@ export const NewApplication: React.FC = () => {
                             />
                         </div>
 
-                        {/* Your Role in the Business */}
+                        {/* Founder Name */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Your Role in the Business
+                                    Founder / Managing Director Name
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
                             <input
                                 type="text"
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="E.g., Owner, Managing Director, CEO..."
+                                placeholder="E.g., Rajesh Kumar"
                                 value={formData.managingDirector}
                                 onChange={e => updateField('managingDirector', e.target.value)}
+                            />
+                        </div>
+
+                        {/* Role in Business */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    Role in Business
+                                </label>
+                            </div>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="E.g., CEO, Co-Founder"
+                                value={formData.role}
+                                onChange={e => updateField('role', e.target.value)}
                             />
                         </div>
 
