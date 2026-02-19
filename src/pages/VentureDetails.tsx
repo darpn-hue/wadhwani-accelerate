@@ -81,19 +81,31 @@ export const VentureDetails: React.FC = () => {
                         <div className="space-y-4">
                             <div>
                                 <div className="text-xs font-medium text-gray-400 uppercase">Product</div>
-                                <div className="font-medium text-gray-900">{venture.growth_current?.product}</div>
-                            </div>
-                            <div>
-                                <div className="text-xs font-medium text-gray-400 uppercase">Geography</div>
-                                <div className="font-medium text-gray-900">{venture.growth_current?.geography}</div>
+                                <div className="font-medium text-gray-900">{venture.growth_current?.product || 'N/A'}</div>
                             </div>
                             <div>
                                 <div className="text-xs font-medium text-gray-400 uppercase">Segment</div>
-                                <div className="font-medium text-gray-900">{venture.growth_current?.segment}</div>
+                                <div className="font-medium text-gray-900">{venture.growth_current?.segment || 'N/A'}</div>
                             </div>
                             <div>
-                                <div className="text-xs font-medium text-gray-400 uppercase">Revenue</div>
-                                <div className="font-medium text-gray-900">{venture.growth_current?.revenue}</div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">Geography</div>
+                                <div className="font-medium text-gray-900">{venture.growth_current?.geography || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">Revenue (Last 12 Months)</div>
+                                <div className="font-medium text-gray-900">₹{venture.revenue_12m || venture.commitment?.lastYearRevenue || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">Full-Time Employees</div>
+                                <div className="font-medium text-gray-900">{venture.full_time_employees || venture.growth_current?.employees || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">City, State</div>
+                                <div className="font-medium text-gray-900">
+                                    {venture.city || venture.growth_current?.city ?
+                                        `${venture.city || venture.growth_current?.city}, ${venture.growth_current?.state || ''}` :
+                                        'N/A'}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -105,40 +117,98 @@ export const VentureDetails: React.FC = () => {
                         <div className="space-y-4">
                             <div>
                                 <div className="text-xs font-medium text-gray-400 uppercase">New Product</div>
-                                <div className="font-medium text-gray-900">{venture.growth_target?.product}</div>
-                            </div>
-                            <div>
-                                <div className="text-xs font-medium text-gray-400 uppercase">New Geography</div>
-                                <div className="font-medium text-gray-900">{venture.growth_target?.geography}</div>
+                                <div className="font-medium text-gray-900">{venture.growth_target?.product || 'N/A'}</div>
                             </div>
                             <div>
                                 <div className="text-xs font-medium text-gray-400 uppercase">New Segment</div>
-                                <div className="font-medium text-gray-900">{venture.growth_target?.segment}</div>
+                                <div className="font-medium text-gray-900">{venture.growth_target?.segment || 'N/A'}</div>
                             </div>
                             <div>
-                                <div className="text-xs font-medium text-gray-400 uppercase">Opportunity Size</div>
-                                <div className="font-medium text-gray-900">{venture.growth_target?.revenue}</div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">New Geography</div>
+                                <div className="font-medium text-gray-900">{venture.growth_target?.geography || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">Revenue Potential (3 Years)</div>
+                                <div className="font-medium text-gray-900">₹{venture.revenue_potential_3y || venture.commitment?.revenuePotential || 'N/A'}</div>
+                            </div>
+                            <div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">Incremental Hiring</div>
+                                <div className="font-medium text-gray-900">{venture.incremental_hiring || venture.commitment?.incrementalHiring || 'N/A'} new hires</div>
+                            </div>
+                            <div>
+                                <div className="text-xs font-medium text-gray-400 uppercase">Growth Focus</div>
+                                <div className="font-medium text-gray-900">{venture.growth_focus || 'N/A'}</div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Commitment & Progress */}
+            {/* Founder & Business Details */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
-                <h3 className="text-lg font-bold text-gray-900">Commitment & Progress</h3>
+                <h3 className="text-lg font-bold text-gray-900">Founder & Business Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div>
-                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Investment Willingness</div>
-                        <div className="font-medium text-gray-900">{venture.commitment?.investment}</div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Founder Name</div>
+                        <div className="font-medium text-gray-900">{venture.founder_name || venture.growth_current?.founder_name || user?.user_metadata?.full_name || 'N/A'}</div>
                     </div>
                     <div>
-                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Dedicated Team Size</div>
-                        <div className="font-medium text-gray-900">{venture.commitment?.teamSize}</div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Role in Business</div>
+                        <div className="font-medium text-gray-900">{venture.growth_current?.role || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Business Type</div>
+                        <div className="font-medium text-gray-900">{venture.growth_current?.business_type || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Referred By</div>
+                        <div className="font-medium text-gray-900">{venture.growth_current?.referred_by || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Email</div>
+                        <div className="font-medium text-gray-900">{venture.growth_current?.email || user?.email || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Phone</div>
+                        <div className="font-medium text-gray-900">{venture.growth_current?.phone || 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Financial & Investment Details */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+                <h3 className="text-lg font-bold text-gray-900">Financial & Investment Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Last Year Revenue</div>
+                        <div className="font-medium text-gray-900 text-lg">₹{venture.revenue_12m || venture.commitment?.lastYearRevenue || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">3-Year Revenue Potential</div>
+                        <div className="font-medium text-gray-900 text-lg">₹{venture.revenue_potential_3y || venture.commitment?.revenuePotential || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Minimum Investment Needed</div>
+                        <div className="font-medium text-gray-900 text-lg">₹{venture.min_investment || venture.commitment?.investment || 'N/A'}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Team & Growth */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
+                <h3 className="text-lg font-bold text-gray-900">Team & Growth Plan</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Current Full-Time Employees</div>
+                        <div className="font-medium text-gray-900 text-lg">{venture.full_time_employees || venture.growth_current?.employees || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Planned Incremental Hiring</div>
+                        <div className="font-medium text-gray-900 text-lg">+{venture.incremental_hiring || venture.commitment?.incrementalHiring || 'N/A'} new hires</div>
                     </div>
                     <div className="col-span-2">
-                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Progress to Date</div>
-                        <div className="font-medium text-gray-900">{venture.commitment?.progress}</div>
+                        <div className="text-xs font-medium text-gray-400 uppercase mb-1">Growth Focus Areas</div>
+                        <div className="font-medium text-gray-900">{venture.growth_focus || 'N/A'}</div>
                     </div>
                 </div>
             </div>
