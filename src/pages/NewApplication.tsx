@@ -117,6 +117,7 @@ export const NewApplication: React.FC = () => {
         city: '',
         state: '',
         email: '',
+        phone: '',
         role: '', // Added role field
         lastYearRevenue: '',
         companyType: '',
@@ -168,6 +169,8 @@ export const NewApplication: React.FC = () => {
                     referred_by: formData.referredBy,
                     employees: formData.numberOfEmployees,
                     role: formData.role,
+                    email: formData.email,
+                    phone: formData.phone,
                 },
                 growth_focus: formData.growthFocus.join(','),
                 commitment: {
@@ -403,6 +406,20 @@ export const NewApplication: React.FC = () => {
                                 placeholder="E.g., yourname@company.com"
                                 value={formData.email}
                                 onChange={e => updateField('email', e.target.value)}
+                            />
+                        </div>
+
+                        {/* Phone Number */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Phone Number
+                            </label>
+                            <input
+                                type="tel"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="E.g., +91 98765 43210"
+                                value={formData.phone}
+                                onChange={e => updateField('phone', e.target.value)}
                             />
                         </div>
 

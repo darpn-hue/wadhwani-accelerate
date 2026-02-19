@@ -94,7 +94,7 @@ class ApiClient {
 
         const ventureData = {
             ...data,
-            profile_id: user.id,
+            user_id: user.id,
             status: 'draft' // Default status
         };
 
