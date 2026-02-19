@@ -116,12 +116,14 @@ export const NewApplication: React.FC = () => {
         incrementalHiring: '',
         city: '',
         state: '',
+        email: '',
+        lastYearRevenue: '',
         companyType: '',
         referredBy: '',
+        numberOfEmployees: '',
 
         // Step 3: Status
-        workstreamStatuses: WORKSTREAMS.map(w => ({ stream: w, status: 'Not started' })),
-        detailedStatusOverview: '',
+        workstreamStatuses: WORKSTREAMS.map(w => ({ stream: w, status: 'No help needed' })),
 
         // Step 4: Support
         specificSupportRequired: '',
@@ -166,7 +168,7 @@ export const NewApplication: React.FC = () => {
                     incrementalHiring: formData.incrementalHiring,
                     revenuePotential: formData.revenuePotential12m,
                 },
-                blockers: formData.detailedStatusOverview,
+                blockers: '',
                 support_request: formData.specificSupportRequired,
             });
 
@@ -238,7 +240,7 @@ export const NewApplication: React.FC = () => {
         1: 'DESCRIBE YOUR CURRENT BUSINESS',
         2: 'TELL US ABOUT YOUR GROWTH VENTURE',
         3: 'WHICH AREAS DO YOU NEED SUPPORT WITH?',
-        4: 'TELL US WHAT TYPE OF HELP YOU ARE LOOKING FOR',
+        4: 'What other support are you seeking from the program?',
     };
 
     return (
@@ -347,6 +349,86 @@ export const NewApplication: React.FC = () => {
                             />
                         </div>
 
+                        {/* Business Type */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Business Type
+                            </label>
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.companyType}
+                                onChange={e => updateField('companyType', e.target.value)}
+                            >
+                                <option value="" disabled>Select company type...</option>
+                                <option value="Manufacturing">Manufacturing</option>
+                                <option value="Services">Services</option>
+                                <option value="Consumer/D2C">Consumer / D2C</option>
+                                <option value="Trading">Trading</option>
+                                <option value="Startups">Startups</option>
+                            </select>
+                        </div>
+
+                        {/* Email */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Email
+                            </label>
+                            <input
+                                type="email"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="E.g., yourname@company.com"
+                                value={formData.email}
+                                onChange={e => updateField('email', e.target.value)}
+                            />
+                        </div>
+
+                        {/* City + State row */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    City
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                    placeholder="E.g., Mumbai"
+                                    value={formData.city}
+                                    onChange={e => updateField('city', e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    State
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                    placeholder="E.g., Maharashtra"
+                                    value={formData.state}
+                                    onChange={e => updateField('state', e.target.value)}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Last 12M Revenue */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                What was your company's revenue in the last 12 months?
+                            </label>
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.lastYearRevenue}
+                                onChange={e => updateField('lastYearRevenue', e.target.value)}
+                            >
+                                <option value="" disabled>Select revenue range...</option>
+                                <option value=">75Cr">&gt;75Cr</option>
+                                <option value="25Cr-75Cr">25Cr - 75Cr</option>
+                                <option value="5Cr-25Cr">5Cr - 25Cr</option>
+                                <option value="1-5Cr">1 - 5Cr</option>
+                                <option value="Pre-Revenue">Pre-Revenue</option>
+                            </select>
+                        </div>
+
                         {/* What do you sell? */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
@@ -392,6 +474,38 @@ export const NewApplication: React.FC = () => {
                                 placeholder="Describe the geographies and regions you cover..."
                                 value={formData.whichRegions}
                                 onChange={e => updateField('whichRegions', e.target.value)}
+                            />
+                        </div>
+
+                        {/* Number of Full time Employees */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Number of Full time Employees
+                            </label>
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.numberOfEmployees}
+                                onChange={e => updateField('numberOfEmployees', e.target.value)}
+                            >
+                                <option value="" disabled>Select number of employees...</option>
+                                <option value="<10">Less than 10</option>
+                                <option value="10-25">10 - 25</option>
+                                <option value="25-100">25 - 100</option>
+                                <option value=">100">&gt; 100</option>
+                            </select>
+                        </div>
+
+                        {/* Referred By Partner */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Referred By Which Partner
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="E.g., Wadhwani Foundation, SIDBI..."
+                                value={formData.referredBy}
+                                onChange={e => updateField('referredBy', e.target.value)}
                             />
                         </div>
                     </div>
@@ -481,7 +595,7 @@ export const NewApplication: React.FC = () => {
                         {/* Revenue Potential */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Projected Revenue Potential (12M)
+                                Projected Revenue Potential (in next 3 Years)
                             </label>
                             <select
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
@@ -497,66 +611,20 @@ export const NewApplication: React.FC = () => {
                             </select>
                         </div>
 
-                        {/* City + State row */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    City
-                                </label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    placeholder="E.g., Mumbai"
-                                    value={formData.city}
-                                    onChange={e => updateField('city', e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    State
-                                </label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    placeholder="E.g., Maharashtra"
-                                    value={formData.state}
-                                    onChange={e => updateField('state', e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Company Type */}
+                        {/* Incremental Hiring */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Company Type
-                            </label>
-                            <select
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-                                value={formData.companyType}
-                                onChange={e => updateField('companyType', e.target.value)}
-                            >
-                                <option value="" disabled>Select company type...</option>
-                                <option value="Manufacturing">Manufacturing</option>
-                                <option value="Services">Services</option>
-                                <option value="Consumer/D2C">Consumer / D2C</option>
-                                <option value="Trading">Trading</option>
-                                <option value="Startups">Startups</option>
-                            </select>
-                        </div>
-
-                        {/* Referred By Partner */}
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Referred By Which Partner
+                                How many more People you want to allocate for this venture?
                             </label>
                             <input
                                 type="text"
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="E.g., Wadhwani Foundation, SIDBI..."
-                                value={formData.referredBy}
-                                onChange={e => updateField('referredBy', e.target.value)}
+                                placeholder="E.g., 2 developers, 1 sales lead..."
+                                value={formData.incrementalHiring}
+                                onChange={e => updateField('incrementalHiring', e.target.value)}
                             />
                         </div>
+
                     </div>
                 )}
 
@@ -609,21 +677,6 @@ export const NewApplication: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Detailed Status Overview */}
-                        <div className="space-y-2 pt-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Detailed Status Overview
-                                </label>
-                                <Mic className="w-4 h-4 text-gray-300" />
-                            </div>
-                            <textarea
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[120px] resize-none"
-                                placeholder="Summarize key milestones reached and any current blockers..."
-                                value={formData.detailedStatusOverview}
-                                onChange={e => updateField('detailedStatusOverview', e.target.value)}
-                            />
-                        </div>
                     </div>
                 )}
 

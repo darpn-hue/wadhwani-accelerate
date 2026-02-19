@@ -784,7 +784,7 @@ export const VSMDashboard: React.FC = () => {
                             <div className="grid grid-cols-3 gap-4">
                                 {STREAMS.map((stream) => {
                                     const need = selectedVenture.needs?.find(n => n.stream === stream);
-                                    const currentStatus = need?.status || 'Not started';
+                                    const currentStatus = need?.status || 'No help needed';
 
                                     return (
                                         <div key={stream} className="p-4 rounded-xl border border-gray-100 bg-white shadow-sm flex flex-col gap-3">
