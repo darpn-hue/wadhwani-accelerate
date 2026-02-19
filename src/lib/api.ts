@@ -51,7 +51,15 @@ class ApiClient {
     async getMe() {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error) throw error;
-        return { user };
+        // Return structured as profile for backward compatibility
+        return {
+            profile: {
+                id: user?.id,
+                email: user?.email,
+                full_name: user?.user_metadata?.full_name,
+                role: user?.user_metadata?.role
+            }
+        };
     }
 
     // ============ VENTURE ENDPOINTS ============
@@ -112,7 +120,14 @@ class ApiClient {
             .single();
 
         if (error) throw error;
-        return { venture: data };
+
+        // Return streams and other data as top-level properties to match component expectations
+        return {
+            venture: data,
+            streams: data.streams || [],
+            milestones: [], // Mock or add fetch if table exists
+            support_hours: {} // Mock or add fetch if table exists
+        };
     }
 
     async updateVenture(id: string, data: any) {

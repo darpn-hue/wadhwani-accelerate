@@ -32,7 +32,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             api.getMe()
                 .then(({ profile }) => {
                     setUser({
-                        id: profile.id,
+                        id: profile.id || '',
                         email: profile.email,
                         user_metadata: {
                             full_name: profile.full_name,
@@ -57,9 +57,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const signIn = async (email: string, password: string) => {
         const { user: apiUser, session } = await api.login(email, password);
 
-        // Store tokens
-        localStorage.setItem('access_token', session.access_token);
-        localStorage.setItem('refresh_token', session.refresh_token);
+        // Store tokens if session exists
+        if (session) {
+            localStorage.setItem('access_token', session.access_token);
+            localStorage.setItem('refresh_token', session.refresh_token);
+        }
 
         // Set user state
         setUser(apiUser);
@@ -73,9 +75,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             role: 'entrepreneur', // Default role
         });
 
-        // Store tokens
-        localStorage.setItem('access_token', session.access_token);
-        localStorage.setItem('refresh_token', session.refresh_token);
+        // Store tokens if session exists
+        if (session) {
+            localStorage.setItem('access_token', session.access_token);
+            localStorage.setItem('refresh_token', session.refresh_token);
+        }
 
         // Set user state
         setUser(apiUser);
