@@ -26,7 +26,9 @@ export const Login: React.FC = () => {
             // If coming from Apply button, go straight to the application form
             if (isApply) {
                 navigate('/dashboard/new-application');
-            } else if (email.includes('admin') || email.includes('manager') || email.includes('committee')) {
+            } else if (email.includes('ravi') || email === 'ravi@wadhwani.com') {
+                navigate('/vmanager/dashboard');
+            } else if (email.includes('admin') || email.includes('rajesh') || email.includes('committee')) {
                 navigate('/vsm/dashboard');
             } else {
                 navigate('/dashboard');
@@ -49,8 +51,8 @@ export const Login: React.FC = () => {
             demoEmail = 'rajesh@wadhwani.com';
             demoPassword = 'password';
         } else if (role === 'venture_mgr') {
-            demoEmail = 'arun@admin.com';
-            demoPassword = 'admin123';
+            demoEmail = 'ravi@wadhwani.com';
+            demoPassword = 'password';
         } else if (role === 'committee') {
             demoEmail = 'committee@admin.com';
             demoPassword = 'admin123';
@@ -67,7 +69,11 @@ export const Login: React.FC = () => {
             await signIn(demoEmail, demoPassword);
 
             // Navigation based on role
-            if (role === 'success_mgr' || role === 'venture_mgr' || role === 'committee') {
+            if (role === 'success_mgr') {
+                navigate('/vsm/dashboard');
+            } else if (role === 'venture_mgr') {
+                navigate('/vmanager/dashboard');
+            } else if (role === 'committee') {
                 navigate('/vsm/dashboard');
             } else {
                 navigate('/dashboard');
@@ -172,7 +178,7 @@ export const Login: React.FC = () => {
                     <div className="text-center text-xs text-gray-400 space-y-1">
                         <div>Venture: vipul@wadhwani.com / password</div>
                         <div>Screening Mgr: rajesh@wadhwani.com / password</div>
-                        <div>Venture Mgr: arun@admin.com / admin123</div>
+                        <div>Venture Mgr: ravi@wadhwani.com / password</div>
                         <div>Committee: committee@admin.com / admin123</div>
                     </div>
                 </div>

@@ -10,6 +10,7 @@ import { Monitor, RefreshCcw, Maximize2 } from 'lucide-react';
 import { AuthProvider } from './context/AuthContext';
 import { VSMDashboardLayout } from './layouts/VSMDashboardLayout';
 import { VSMDashboard } from './pages/VSMDashboard';
+import { VentureManagerDashboard } from './pages/VentureManagerDashboard';
 
 import { VentureWorkbench } from './pages/VentureWorkbench';
 
@@ -84,6 +85,11 @@ function App() {
           {/* Success Manager Dashboard Routes */}
           <Route path="/vsm/dashboard" element={<VSMDashboardLayout />}>
             <Route index element={<VSMDashboard />} />
+          </Route>
+
+          {/* Venture Manager Dashboard Routes */}
+          <Route path="/vmanager/dashboard" element={<VSMDashboardLayout />}>
+            <Route index element={<VentureManagerDashboard />} />
           </Route>
 
 

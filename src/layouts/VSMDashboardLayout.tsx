@@ -16,7 +16,7 @@ export const VSMDashboardLayout: React.FC = () => {
     // Determine Role Label
     const getRoleLabel = () => {
         if (!user?.email) return 'Screening Manager';
-        if (user.email.includes('arun')) return 'Venture Manager';
+        if (user.email.includes('ravi')) return 'Venture Manager';
         if (user.email.includes('committee')) return 'Selection Committee';
         return 'Screening Manager';
     };
