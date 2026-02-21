@@ -1,22 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Circle, CheckCircle2, Zap, ShieldAlert, ChevronDown, Loader2 } from 'lucide-react';
+import { CheckCircle2, Zap, ShieldAlert, ChevronDown, Loader2 } from 'lucide-react';
 
-export type StreamStatus = 'No help needed' | 'Working on it' | 'Need guidance' | 'Need deep support';
+export type StreamStatus = 'Don\'t need help' | 'Need some guidance' | 'Need deep support';
 
 export const STATUS_CONFIG: Record<string, { icon: any, color: string, bg: string, border: string }> = {
-    'No help needed': {
+    'Don\'t need help': {
         icon: CheckCircle2,
         color: 'text-green-600',
         bg: 'bg-green-50',
         border: 'border-green-200'
     },
-    'Working on it': {
-        icon: Circle,
-        color: 'text-blue-600',
-        bg: 'bg-blue-50',
-        border: 'border-blue-200'
-    },
-    'Need guidance': {
+    'Need some guidance': {
         icon: Zap,
         color: 'text-amber-500',
         bg: 'bg-amber-50',
@@ -31,11 +25,14 @@ export const STATUS_CONFIG: Record<string, { icon: any, color: string, bg: strin
 };
 
 const LEGACY_MAPPING: Record<string, string> = {
-    'Not started': 'Working on it',
-    'On track': 'No help needed',
-    'Need some advice': 'Need guidance',
-    'Completed': 'No help needed',
-    'Done': 'No help needed'
+    'No help needed': 'Don\'t need help',
+    'Working on it': 'Need some guidance',
+    'Not started': 'Need some guidance',
+    'On track': 'Don\'t need help',
+    'Need guidance': 'Need some guidance',
+    'Need some advice': 'Need some guidance',
+    'Completed': 'Don\'t need help',
+    'Done': 'Don\'t need help'
 };
 
 interface StatusSelectProps {

@@ -8,83 +8,28 @@ import { StatusSelect } from '../components/StatusSelect';
 // Steps configuration - matching the reference screens exactly
 const STEPS = [
     { id: 1, label: 'BUSINESS' },
-    { id: 2, label: 'VENTURE' },
-    { id: 3, label: 'STATUS' },
-    { id: 4, label: 'SUPPORT' },
+    { id: 2, label: 'GROWTH IDEA' },
+    { id: 3, label: 'SUPPORT' },
 ];
 
-// Workstreams for Step 3 - matching the reference screen
+// Functional Areas for Step 3 (Support) - matching the reference screen
 const WORKSTREAMS = [
     'Product',
-    'GTM',
-    'Funding',
-    'SupplyChain',
-    'Operations',
+    'Go-To-Market (GTM)',
+    'Capital Planning',
     'Team',
+    'Supply Chain',
+    'Operations',
 ];
 
-// Tooltip content per workstream — warm, founder-friendly guidance
-const WORKSTREAM_INFO: Record<string, { tagline: string; deliverables: string[] }> = {
-    Product: {
-        tagline: 'This is about your product or service 👇',
-        deliverables: [
-            'Think about what you\'re selling and to whom',
-            'Is your product/service ready, or still in development?',
-            'What makes it better or different from others?',
-            'Have you tested it with real customers yet?',
-            'Do you have a clear plan to grow or improve it?',
-        ],
-    },
-    GTM: {
-        tagline: 'GTM = how you find & win customers 👇',
-        deliverables: [
-            'Think about how you currently get new customers',
-            'Do you sell directly, through agents, or online?',
-            'Is your sales process working, or feeling stuck?',
-            'Do you know exactly who your best customer is?',
-            'Do you have a plan to reach more customers this year?',
-        ],
-    },
-    Funding: {
-        tagline: 'This is about your money & finances 👇',
-        deliverables: [
-            'Think about whether your business is making money yet',
-            'Do you know your monthly income and expenses clearly?',
-            'Have you taken any loans or outside investment?',
-            'Do you need money to grow — and how much?',
-            'Do you have a basic financial plan for the next year?',
-        ],
-    },
-    SupplyChain: {
-        tagline: 'This is about getting & delivering your product 👇',
-        deliverables: [
-            'Think about where you get your raw materials or stock',
-            'Is your supply reliable, or do you face shortages?',
-            'How do you deliver your product to customers?',
-            'Are your delivery costs under control?',
-            'Do you have trusted suppliers you can count on?',
-        ],
-    },
-    Operations: {
-        tagline: 'This is about how your business runs daily 👇',
-        deliverables: [
-            'Think about how smoothly your day-to-day work runs',
-            'Are there tasks that keep breaking down or causing delays?',
-            'Do you track your sales, costs, and output regularly?',
-            'Is your team clear on who does what?',
-            'Are you spending too much time on things that could be automated?',
-        ],
-    },
-    Team: {
-        tagline: 'This is about the people in your business 👇',
-        deliverables: [
-            'Think about who is helping you run the business today',
-            'Are there key roles you urgently need to fill?',
-            'Is your team motivated and clear on their goals?',
-            'Do you struggle to find or keep good people?',
-            'Do you have a plan to grow your team as the business grows?',
-        ],
-    },
+// Tooltip content per functional area
+const WORKSTREAM_INFO: Record<string, string> = {
+    'Product': 'Improving or refining your product/service to better fit customer needs and support growth.',
+    'Go-To-Market (GTM)': 'Support in acquiring customers, entering new markets, pricing, sales channels, or marketing.',
+    'Capital Planning': 'Help with funding strategy, investor readiness, working capital, or financial planning for growth.',
+    'Team': 'Hiring key roles, building leadership capability, or strengthening team structure for scale.',
+    'Supply Chain': 'Improving vendors, sourcing, logistics, distribution, or delivery capacity to handle growth.',
+    'Operations': 'Making processes, systems, and execution more efficient to scale smoothly and profitably.',
 };
 
 type GrowthType = 'product' | 'segment' | 'geography';
@@ -107,7 +52,7 @@ export const NewApplication: React.FC = () => {
         whoDoYouSellTo: '',
         whichRegions: '',
 
-        // Step 2: Venture
+        // Step 2: Growth Idea
         growthFocus: [] as GrowthType[],
         focusProduct: '',
         focusSegment: '',
@@ -125,11 +70,10 @@ export const NewApplication: React.FC = () => {
         referredBy: '',
         numberOfEmployees: '',
 
-        // Step 3: Status
-        workstreamStatuses: WORKSTREAMS.map(w => ({ stream: w, status: 'No help needed' })),
-
-        // Step 4: Support
-        specificSupportRequired: '',
+        // Step 3: Support
+        workstreamStatuses: WORKSTREAMS.map(w => ({ stream: w, status: 'Don\'t need help' })),
+        supportDescription: '',
+        corporatePresentation: null as File | null,
     });
 
     const validateField = (field: string, value: string): string => {
@@ -219,7 +163,7 @@ export const NewApplication: React.FC = () => {
                     lastYearRevenue: formData.lastYearRevenue,
                 },
                 blockers: '',
-                support_request: formData.specificSupportRequired,
+                support_request: formData.supportDescription,
             });
 
             // 2. Create Venture Streams via API
@@ -251,7 +195,7 @@ export const NewApplication: React.FC = () => {
             return;
         }
 
-        if (currentStep < 4) {
+        if (currentStep < 3) {
             setCurrentStep(prev => prev + 1);
         } else {
             handleSubmit();
@@ -296,9 +240,8 @@ export const NewApplication: React.FC = () => {
     // ─── Step Header ─────────────────────────────────────────────────────────
     const stepTitles: Record<number, string> = {
         1: 'DESCRIBE YOUR CURRENT BUSINESS',
-        2: 'TELL US ABOUT YOUR GROWTH VENTURE',
+        2: 'TELL US ABOUT YOUR GROWTH IDEA',
         3: 'WHICH AREAS DO YOU NEED SUPPORT WITH?',
-        4: 'What other support are you seeking from the program?',
     };
 
     return (
@@ -360,6 +303,15 @@ export const NewApplication: React.FC = () => {
             {/* ── Step Content Card ─────────────────────────────────────────── */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
 
+                {/* Foundation support message - Step 2 only */}
+                {currentStep === 2 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-5 mb-6">
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                            The Foundation offers deeper support to businesses working on growth initiatives with meaningful incremental revenue potential - like launching or improving a product, entering a new customer segment, or expanding into a new market, etc <span className="font-bold text-blue-700">at NO COST</span>
+                        </p>
+                    </div>
+                )}
+
                 {/* Step Header */}
                 <div className="flex items-center gap-3 mb-8">
                     <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
@@ -373,28 +325,25 @@ export const NewApplication: React.FC = () => {
                 {/* ── STEP 1: BUSINESS ─────────────────────────────────────── */}
                 {currentStep === 1 && (
                     <div className="space-y-6">
-                        {/* Business Name */}
+                        {/* 1. How did you hear about us? */}
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Business Name
-                                </label>
-                                <Mic className="w-4 h-4 text-gray-300" />
-                            </div>
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                How did you hear about us?
+                            </label>
                             <input
                                 type="text"
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="Enter registered business name"
-                                value={formData.businessName}
-                                onChange={e => updateField('businessName', e.target.value)}
+                                placeholder="E.g., LinkedIn, referral, event..."
+                                value={formData.referredBy}
+                                onChange={e => updateField('referredBy', e.target.value)}
                             />
                         </div>
 
-                        {/* Founder Name */}
+                        {/* 2. Name */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Founder / Managing Director Name
+                                    Name
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -407,42 +356,7 @@ export const NewApplication: React.FC = () => {
                             />
                         </div>
 
-                        {/* Role in Business */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Role in Business
-                                </label>
-                            </div>
-                            <input
-                                type="text"
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="E.g., CEO, Co-Founder"
-                                value={formData.role}
-                                onChange={e => updateField('role', e.target.value)}
-                            />
-                        </div>
-
-                        {/* Business Type */}
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Business Type
-                            </label>
-                            <select
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-                                value={formData.companyType}
-                                onChange={e => updateField('companyType', e.target.value)}
-                            >
-                                <option value="" disabled>Select company type...</option>
-                                <option value="Manufacturing">Manufacturing</option>
-                                <option value="Services">Services</option>
-                                <option value="Consumer/D2C">Consumer / D2C</option>
-                                <option value="Trading">Trading</option>
-                                <option value="Startups">Startups</option>
-                            </select>
-                        </div>
-
-                        {/* Email */}
+                        {/* 3. Email */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                                 Email
@@ -461,10 +375,10 @@ export const NewApplication: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Phone Number */}
+                        {/* 4. Mobile */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Phone Number
+                                Mobile
                             </label>
                             <input
                                 type="tel"
@@ -480,58 +394,95 @@ export const NewApplication: React.FC = () => {
                             )}
                         </div>
 
-                        {/* City + State row */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    City
-                                </label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    placeholder="E.g., Mumbai"
-                                    value={formData.city}
-                                    onChange={e => updateField('city', e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    State
-                                </label>
-                                <input
-                                    type="text"
-                                    className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                    placeholder="E.g., Maharashtra"
-                                    value={formData.state}
-                                    onChange={e => updateField('state', e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Last 12M Revenue */}
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                What was your company's revenue in the last 12 months?
-                            </label>
-                            <select
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-                                value={formData.lastYearRevenue}
-                                onChange={e => updateField('lastYearRevenue', e.target.value)}
-                            >
-                                <option value="" disabled>Select revenue range...</option>
-                                <option value=">75Cr">&gt;75Cr</option>
-                                <option value="25Cr-75Cr">25Cr - 75Cr</option>
-                                <option value="5Cr-25Cr">5Cr - 25Cr</option>
-                                <option value="1-5Cr">1 - 5Cr</option>
-                                <option value="Pre-Revenue">Pre-Revenue</option>
-                            </select>
-                        </div>
-
-                        {/* What do you sell? */}
+                        {/* 5. Registered company name */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    What do you sell?
+                                    Registered company name
+                                </label>
+                                <Mic className="w-4 h-4 text-gray-300" />
+                            </div>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="Enter registered business name"
+                                value={formData.businessName}
+                                onChange={e => updateField('businessName', e.target.value)}
+                            />
+                        </div>
+
+                        {/* 6. Designation (Your role in the company) */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Designation (Your role in the company)
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="E.g., CEO, Co-Founder"
+                                value={formData.role}
+                                onChange={e => updateField('role', e.target.value)}
+                            />
+                        </div>
+
+                        {/* 7. Which city is your company primarily based in */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Which city is your company primarily based in
+                            </label>
+                            <input
+                                type="text"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
+                                placeholder="E.g., Mumbai"
+                                value={formData.city}
+                                onChange={e => updateField('city', e.target.value)}
+                            />
+                        </div>
+
+                        {/* 8. State in which your company is located */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                State in which your company is located
+                            </label>
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.state}
+                                onChange={e => updateField('state', e.target.value)}
+                            >
+                                <option value="" disabled>Select state...</option>
+                                <option value="Gujarat">Gujarat</option>
+                                <option value="Maharashtra">Maharashtra</option>
+                                <option value="Tamil Nadu">Tamil Nadu</option>
+                                <option value="Karnataka">Karnataka</option>
+                                <option value="Uttar Pradesh">Uttar Pradesh</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        {/* 9. Company type */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Company type
+                            </label>
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.companyType}
+                                onChange={e => updateField('companyType', e.target.value)}
+                            >
+                                <option value="" disabled>Select company type...</option>
+                                <option value="Manufacturing">Manufacturing</option>
+                                <option value="Services">Services</option>
+                                <option value="Consumer/D2C">Consumer/D2C</option>
+                                <option value="Trading">Trading</option>
+                                <option value="Startups">Startups</option>
+                            </select>
+                        </div>
+
+                        {/* 10. What do you sell */}
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                    What do you sell
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -543,11 +494,11 @@ export const NewApplication: React.FC = () => {
                             />
                         </div>
 
-                        {/* Who do you sell to? */}
+                        {/* 11. Who do you sell to */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Who do you sell to?
+                                    Who do you sell to
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -559,11 +510,11 @@ export const NewApplication: React.FC = () => {
                             />
                         </div>
 
-                        {/* Which regions do you sell to? */}
+                        {/* 12. Which regions do you sell to */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Which regions do you sell to?
+                                    Which regions do you sell to
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
@@ -575,10 +526,10 @@ export const NewApplication: React.FC = () => {
                             />
                         </div>
 
-                        {/* Number of Full time Employees */}
+                        {/* 13. Number of full time employees */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Number of Full time Employees
+                                Number of full time employees
                             </label>
                             <select
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
@@ -586,36 +537,41 @@ export const NewApplication: React.FC = () => {
                                 onChange={e => updateField('numberOfEmployees', e.target.value)}
                             >
                                 <option value="" disabled>Select number of employees...</option>
-                                <option value="<10">Less than 10</option>
+                                <option value="<10">&lt;10</option>
                                 <option value="10-25">10 - 25</option>
                                 <option value="25-100">25 - 100</option>
-                                <option value=">100">&gt; 100</option>
+                                <option value=">100">&gt;100</option>
                             </select>
                         </div>
 
-                        {/* Referred By Partner */}
+                        {/* 14. What was your company's revenue in the last 12 months */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Referred By Which Partner
+                                What was your company's revenue in the last 12 months
                             </label>
-                            <input
-                                type="text"
-                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                placeholder="E.g., Wadhwani Foundation, SIDBI..."
-                                value={formData.referredBy}
-                                onChange={e => updateField('referredBy', e.target.value)}
-                            />
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
+                                value={formData.lastYearRevenue}
+                                onChange={e => updateField('lastYearRevenue', e.target.value)}
+                            >
+                                <option value="" disabled>Select revenue range...</option>
+                                <option value="Pre Revenue">Pre Revenue</option>
+                                <option value="1Cr-5Cr">1Cr - 5Cr</option>
+                                <option value="5Cr-25Cr">5Cr - 25Cr</option>
+                                <option value="25Cr-75Cr">25Cr - 75Cr</option>
+                                <option value=">75Cr">&gt;75Cr</option>
+                            </select>
                         </div>
                     </div>
                 )}
 
-                {/* ── STEP 2: VENTURE ──────────────────────────────────────── */}
+                {/* ── STEP 2: GROWTH IDEA ──────────────────────────────────────── */}
                 {currentStep === 2 && (
                     <div className="space-y-8">
                         {/* Growth type question */}
                         <div className="space-y-4">
                             <p className="text-sm text-gray-600">
-                                Is your venture delivering a new product/service or targeting a new segment or looking to enter a new geography?
+                                Is your growth idea delivering a new product/service or targeting a new segment or looking to enter a new geography?
                             </p>
                             <div className="grid grid-cols-3 gap-3">
                                 {([
@@ -642,13 +598,13 @@ export const NewApplication: React.FC = () => {
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                            Describe the New Product/Service
+                                            Describe your new Product or Service
                                         </label>
                                         <Mic className="w-4 h-4 text-gray-300" />
                                     </div>
                                     <textarea
                                         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
-                                        placeholder="Detail the technical or service innovation..."
+                                        placeholder="What is your new Product or Service&#10;Example: Launching a new ready-to-eat poha snack."
                                         value={formData.focusProduct}
                                         onChange={e => updateField('focusProduct', e.target.value)}
                                     />
@@ -659,13 +615,13 @@ export const NewApplication: React.FC = () => {
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                            Describe the Target Segment
+                                            Describe your new Target Customer (who and how you sell)
                                         </label>
                                         <Mic className="w-4 h-4 text-gray-300" />
                                     </div>
                                     <textarea
                                         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
-                                        placeholder="Who is the ideal customer for this expansion?"
+                                        placeholder="Who is this product for, and how will you sell it (online and in stores)&#10;Example: Sell this ready-to-eat poha snack to small kirana stores and local retailers through distributors."
                                         value={formData.focusSegment}
                                         onChange={e => updateField('focusSegment', e.target.value)}
                                     />
@@ -676,13 +632,13 @@ export const NewApplication: React.FC = () => {
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                            Describe the Target Geography
+                                            Describe the new place you want to expand to (city, state, or country)
                                         </label>
                                         <Mic className="w-4 h-4 text-gray-300" />
                                     </div>
                                     <textarea
                                         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[110px] resize-none"
-                                        placeholder="List the specific regions or countries..."
+                                        placeholder="Which city, state or country are you expanding into?&#10;Example: Start in Pune, then expand across Maharashtra."
                                         value={formData.focusGeography}
                                         onChange={e => updateField('focusGeography', e.target.value)}
                                     />
@@ -690,10 +646,10 @@ export const NewApplication: React.FC = () => {
                             )}
                         </div>
 
-                        {/* Revenue Potential */}
+                        {/* Incremental Revenue */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                Projected Revenue Potential (in next 3 Years)
+                                How much incremental revenue are you expecting from this growth idea in the next 3 years
                             </label>
                             <select
                                 className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
@@ -701,44 +657,41 @@ export const NewApplication: React.FC = () => {
                                 onChange={e => updateField('revenuePotential12m', e.target.value)}
                             >
                                 <option value="" disabled>Choose</option>
-                                <option value=">75Cr">&gt;75Cr</option>
-                                <option value="25Cr-75Cr">25Cr - 75Cr</option>
-                                <option value="5Cr-25Cr">5Cr - 25Cr</option>
-                                <option value="1-5Cr">1 - 5Cr</option>
-                                <option value="Pre-Revenue">Pre-Revenue</option>
+                                <option value="5Cr - 15 Cr">5Cr - 15 Cr</option>
+                                <option value="15Cr - 50Cr">15Cr - 50Cr</option>
+                                <option value="50Cr+">50Cr+</option>
                             </select>
                         </div>
 
-                        {/* Incremental Hiring */}
+                        {/* Funding Plan */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                How many more people do you plan to hire for this venture?
+                                How do you plan to fund this growth idea
                             </label>
-                            <input
-                                type="text"
-                                className={`w-full rounded-xl border ${validationErrors.incrementalHiring ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'} px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all`}
-                                placeholder="E.g., 5"
+                            <select
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm text-gray-700 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all appearance-none cursor-pointer"
                                 value={formData.incrementalHiring}
                                 onChange={e => updateField('incrementalHiring', e.target.value)}
-                            />
-                            {validationErrors.incrementalHiring && (
-                                <p className="text-xs text-red-600 flex items-center gap-1">
-                                    <span>⚠</span> {validationErrors.incrementalHiring}
-                                </p>
-                            )}
+                            >
+                                <option value="" disabled>Choose</option>
+                                <option value="Internal Cashflows">Internal Cashflows</option>
+                                <option value="Bank Loan or NBFC Financing">Bank Loan or NBFC Financing</option>
+                                <option value="Equity oe External Capital">Equity oe External Capital</option>
+                                <option value="Yet to be planned">Yet to be planned</option>
+                            </select>
                         </div>
 
                     </div>
                 )}
 
-                {/* ── STEP 3: STATUS ───────────────────────────────────────── */}
+                {/* ── STEP 3: SUPPORT ──────────────────────────────────────── */}
                 {currentStep === 3 && (
                     <div className="space-y-6">
-                        {/* Workstream table */}
+                        {/* Functional Areas table */}
                         <div>
                             {/* Header row */}
                             <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-100">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Workstream</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Functional Area</span>
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Current Status</span>
                             </div>
 
@@ -746,25 +699,17 @@ export const NewApplication: React.FC = () => {
                             <div className="divide-y divide-gray-100">
                                 {formData.workstreamStatuses.map((ws, idx) => (
                                     <div key={ws.stream} className="grid grid-cols-2 gap-4 items-center py-4">
-                                        {/* Workstream name + info tooltip */}
+                                        {/* Functional Area name + info tooltip */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-semibold text-gray-800">{ws.stream}</span>
                                             <div className="relative group">
                                                 <Info className="w-3.5 h-3.5 text-gray-300 hover:text-blue-500 cursor-help transition-colors" />
                                                 {/* Tooltip */}
-                                                <div className="absolute left-5 top-1/2 -translate-y-1/2 z-50 hidden group-hover:block w-64 pointer-events-none">
+                                                <div className="absolute left-5 top-1/2 -translate-y-1/2 z-50 hidden group-hover:block w-72 pointer-events-none">
                                                     <div className="bg-gray-900 text-white rounded-xl p-3.5 shadow-2xl">
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-blue-400 mb-2">
-                                                            {WORKSTREAM_INFO[ws.stream]?.tagline}
+                                                        <p className="text-xs text-gray-200 leading-relaxed">
+                                                            {WORKSTREAM_INFO[ws.stream]}
                                                         </p>
-                                                        <ul className="space-y-1.5">
-                                                            {WORKSTREAM_INFO[ws.stream]?.deliverables.map((d, i) => (
-                                                                <li key={i} className="flex items-start gap-2 text-xs text-gray-300">
-                                                                    <span className="text-blue-400 mt-0.5 flex-shrink-0">→</span>
-                                                                    {d}
-                                                                </li>
-                                                            ))}
-                                                        </ul>
                                                         {/* Arrow */}
                                                         <div className="absolute left-[-5px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-gray-900 rotate-45" />
                                                     </div>
@@ -780,35 +725,55 @@ export const NewApplication: React.FC = () => {
                             </div>
                         </div>
 
-                    </div>
-                )}
-
-                {/* ── STEP 4: SUPPORT ──────────────────────────────────────── */}
-                {currentStep === 4 && (
-                    <div className="space-y-6">
-                        {/* Specific Support Required */}
+                        {/* Support Description */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                                    Specific Support Required
+                                    Describe in detail the support you are seeking from the program
                                 </label>
                                 <Mic className="w-4 h-4 text-gray-300" />
                             </div>
                             <textarea
-                                className="w-full rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 px-4 py-4 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:border-solid focus:bg-white transition-all min-h-[200px] resize-none"
-                                placeholder="E.g., Mentorship in Go-to-Market, Networking with APAC hubs, Technical Advisory for cloud scaling..."
-                                value={formData.specificSupportRequired}
-                                onChange={e => updateField('specificSupportRequired', e.target.value)}
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all min-h-[120px] resize-none"
+                                placeholder="Please be specific. Tell us exactly what kind of help you need from this program and what you want to achieve."
+                                value={formData.supportDescription}
+                                onChange={e => updateField('supportDescription', e.target.value)}
                             />
                         </div>
 
-                        {/* Info box */}
-                        <div className="flex items-start gap-3 bg-blue-50 rounded-xl p-4">
-                            <Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-blue-700">
-                                Be as specific as possible. Our ecosystem support model is designed to deploy targeted interventions based on the granularity of your requests here.
-                            </p>
+                        {/* Corporate Presentation Upload */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Please upload your corporate presentation to help us understand your business better
+                            </label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="file"
+                                    id="corporatePresentation"
+                                    accept=".pdf,.ppt,.pptx"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0] || null;
+                                        setFormData(prev => ({ ...prev, corporatePresentation: file }));
+                                    }}
+                                    className="hidden"
+                                />
+                                <label
+                                    htmlFor="corporatePresentation"
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 cursor-pointer transition-colors text-sm font-medium text-gray-700"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                    Choose File
+                                </label>
+                                {formData.corporatePresentation && (
+                                    <span className="text-sm text-gray-600">
+                                        {formData.corporatePresentation.name}
+                                    </span>
+                                )}
+                            </div>
                         </div>
+
                     </div>
                 )}
             </div>
@@ -844,7 +809,7 @@ export const NewApplication: React.FC = () => {
                             <Loader2 className="w-4 h-4 animate-spin" />
                             Submitting...
                         </>
-                    ) : currentStep === 4 ? (
+                    ) : currentStep === 3 ? (
                         <>
                             SUBMIT APPLICATION
                             <Check className="w-4 h-4" />
