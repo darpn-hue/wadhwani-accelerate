@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../lib/api';
-import { ArrowLeft, CheckCircle, FileText, Loader2, PenTool } from 'lucide-react';
+import { ArrowLeft, CheckCircle, FileText, Loader2, PenTool, Lock, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { StatusSelect } from '../components/StatusSelect';
 
@@ -41,6 +41,10 @@ export const VentureWorkbench = () => {
             if (!id) return;
             // Fetch All Venture Data in one call
             const { venture, streams, milestones, support_hours } = await api.getVenture(id);
+
+            console.log('🔍 Venture Data:', venture);
+            console.log('🔒 Workbench Locked:', venture.workbench_locked);
+            console.log('📊 Status:', venture.status);
 
             setVenture(venture);
             setStreams(streams || []);
@@ -131,6 +135,41 @@ export const VentureWorkbench = () => {
             </div>
 
             <div className="max-w-7xl mx-auto">
+                {/* Workbench Locked Banner */}
+                {(venture.workbench_locked || venture.status === 'Contract Sent') && (
+                    <div className="mb-6 bg-gradient-to-r from-orange-50 to-amber-50 border-2 border-orange-300 rounded-xl shadow-lg overflow-hidden">
+                        <div className="p-6 flex items-start gap-4">
+                            <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center flex-shrink-0">
+                                <Lock className="w-6 h-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                                    <h3 className="text-lg font-bold text-orange-900">Action Required: Review Contract</h3>
+                                </div>
+                                <p className="text-sm text-orange-800 mb-4">
+                                    Your Venture Manager has sent a contract for your review. Please review the contract terms and sign to unlock your workbench and continue with the program.
+                                </p>
+                                <div className="flex items-center gap-3">
+                                    <Button
+                                        className="bg-orange-600 hover:bg-orange-700 text-white"
+                                        onClick={() => {
+                                            // Scroll to contract section or show contract modal
+                                            alert('Contract review feature coming soon. Please check your email for contract details.');
+                                        }}
+                                    >
+                                        <FileText className="w-4 h-4 mr-2" />
+                                        Review Contract
+                                    </Button>
+                                    <span className="text-xs text-orange-700 font-medium">
+                                        Status: <span className="font-bold">{venture.status}</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {!isSigned ? (
                     // SIGNING VIEW
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden max-w-4xl mx-auto">

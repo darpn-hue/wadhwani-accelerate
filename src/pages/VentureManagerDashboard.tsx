@@ -1,0 +1,1172 @@
+import React, { useEffect, useState } from 'react';
+import { Building2, Sparkles, TrendingUp, Loader2, Briefcase, Users, Target, Send, AlertTriangle, HelpCircle, Map, ChevronRight, Zap, CheckCircle, FileText } from 'lucide-react';
+import { api } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/ui/Button';
+
+interface Venture {
+    id: string;
+    name: string;
+    city: string;
+    location: string;
+    status: string;
+    program_recommendation: string;
+    revenue_12m: number;
+    revenue_potential_3y: number;
+    full_time_employees: number;
+    founder_name?: string;
+    growth_current?: any;
+    commitment?: any;
+    needs: { id?: string; stream: string; status: string }[];
+    streams?: any[];
+    created_at: string;
+    vsm_reviewed_at: string;
+    vsm_notes?: string;
+    internal_comments?: string;
+    ai_analysis?: any;
+    growth_target?: any;
+    incremental_hiring?: string;
+    venture_partner?: string;
+    workbench_locked?: boolean;
+}
+
+export const VentureManagerDashboard: React.FC = () => {
+    const { user } = useAuth();
+    const [ventures, setVentures] = useState<Venture[]>([]);
+    const [selectedVenture, setSelectedVenture] = useState<Venture | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
+    const [roadmapGenerated, setRoadmapGenerated] = useState(false);
+
+    // Commitment & Approval State
+    const [supportProvided, setSupportProvided] = useState('');
+    const [selectedProgram, setSelectedProgram] = useState('Accelerate Prime');
+    const [ventureComments, setVentureComments] = useState('');
+    const [savingCommitment, setSavingCommitment] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            fetchVentures();
+        }
+    }, [user]);
+
+    const fetchVentures = async () => {
+        try {
+            // Fetch all ventures with program_recommendation = "Accelerate Prime"
+            const { ventures: allVentures } = await api.getVentures({});
+
+            console.log('🔍 All ventures:', allVentures);
+            console.log('🔍 Venture recommendations:', allVentures?.map((v: any) => ({
+                name: v.name,
+                program_recommendation: v.program_recommendation,
+                matches: v.program_recommendation === 'Accelerate Prime'
+            })));
+
+            // Filter for Accelerate Prime (Venture Manager only sees these)
+            const primeVentures = allVentures?.filter(
+                (v: Venture) => v.program_recommendation === 'Accelerate Prime'
+            ) || [];
+
+            console.log('✅ Filtered Accelerate Prime ventures:', primeVentures);
+
+            // Map ventures to ensure needs array exists
+            const mappedVentures = primeVentures.map((v: any) => ({
+                ...v,
+                needs: (v.streams || v.needs || []).map((s: any) => ({
+                    id: s.id,
+                    stream: s.stream_name,
+                    status: s.status
+                }))
+            }));
+
+            setVentures(mappedVentures);
+        } catch (err) {
+            console.error('Error fetching ventures:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVentureSelect = async (venture: Venture) => {
+        // Optimistically set selected to show UI immediately
+        setSelectedVenture(venture);
+        setRoadmapGenerated(false); // Reset roadmap when selecting new venture
+
+        // Fetch fresh details with streams
+        try {
+            const { venture: freshVenture, streams } = await api.getVenture(venture.id);
+
+            // Extract fields from JSONB
+            if (freshVenture.commitment) {
+                freshVenture.revenue_12m = freshVenture.commitment.lastYearRevenue || '0';
+                freshVenture.revenue_potential_3y = freshVenture.commitment.revenuePotential || '0';
+                freshVenture.incremental_hiring = freshVenture.commitment.incrementalHiring || 'TBD';
+            }
+
+            if (freshVenture.growth_current) {
+                freshVenture.full_time_employees = freshVenture.growth_current.employees || '0';
+            }
+
+            // Map streams to needs format
+            const mappedNeeds = (streams || []).map((s: any) => ({
+                id: s.id,
+                stream: s.stream_name,
+                status: s.status
+            }));
+
+            const fullVenture = {
+                ...freshVenture,
+                needs: mappedNeeds
+            };
+
+            setSelectedVenture(fullVenture);
+        } catch (error) {
+            console.error('Error fetching venture details:', error);
+        }
+    };
+
+    const generateRoadmap = async () => {
+        if (!selectedVenture) return;
+
+        setGeneratingRoadmap(true);
+
+        // Simulate AI roadmap generation (2 seconds)
+        setTimeout(() => {
+            setGeneratingRoadmap(false);
+            setRoadmapGenerated(true);
+        }, 2000);
+    };
+
+    const handleStatusChange = async (newStatus: string) => {
+        if (!selectedVenture) return;
+
+        setSavingCommitment(true);
+
+        try {
+            const updatePayload: any = {
+                status: newStatus,
+                venture_partner: user?.email || 'Venture Manager',
+            };
+
+            // If status is Contract Sent, lock the workbench
+            if (newStatus === 'Contract Sent') {
+                updatePayload.workbench_locked = true;
+            }
+
+            await api.updateVenture(selectedVenture.id, updatePayload);
+
+            // Update local state
+            setVentures(prev => prev.map(v =>
+                v.id === selectedVenture.id
+                    ? { ...v, status: newStatus }
+                    : v
+            ));
+
+            setSelectedVenture(prev => prev ? { ...prev, status: newStatus } : null);
+
+            // Show workbench lock notification if contract sent
+            if (newStatus === 'Contract Sent') {
+                alert(`✓ Status updated to: ${newStatus}\n\n🔒 Workbench has been locked. The venture will be notified to take action.`);
+            }
+        } catch (error: any) {
+            console.error('Error updating venture status:', error);
+            alert('Failed to update status: ' + error.message);
+        } finally {
+            setSavingCommitment(false);
+        }
+    };
+
+    const handleApproveAndSend = async (actionType: 'agreement' | 'contract') => {
+        if (!selectedVenture) return;
+
+        setSavingCommitment(true);
+
+        try {
+            const newStatus = actionType === 'agreement' ? 'Agreement Sent' : 'Contract Sent';
+
+            const updatePayload: any = {
+                status: newStatus,
+                venture_partner: user?.email || 'Venture Manager',
+                // Store commitment data if needed
+            };
+
+            // If sending contract, lock the workbench
+            if (actionType === 'contract') {
+                updatePayload.workbench_locked = true;
+            }
+
+            await api.updateVenture(selectedVenture.id, updatePayload);
+
+            // Update local state
+            setVentures(prev => prev.map(v =>
+                v.id === selectedVenture.id
+                    ? { ...v, status: newStatus }
+                    : v
+            ));
+
+            setSelectedVenture(prev => prev ? { ...prev, status: newStatus } : null);
+
+            if (actionType === 'contract') {
+                alert(`✓ Contract sent successfully!\n\nStatus updated to: ${newStatus}\n🔒 Workbench has been locked. The venture will be notified to take action.`);
+            } else {
+                alert(`✓ Agreement sent successfully!\n\nStatus updated to: ${newStatus}`);
+            }
+        } catch (error: any) {
+            console.error('Error updating venture:', error);
+            alert('Failed to send: ' + error.message);
+        } finally {
+            setSavingCommitment(false);
+        }
+    };
+
+    const filteredVentures = statusFilter === 'all'
+        ? ventures
+        : ventures.filter(v => v.status === statusFilter);
+
+    // Helper to get status dot color
+    const getStatusDotColor = (status: string) => {
+        switch (status) {
+            case 'Submitted':
+                return 'bg-yellow-400';
+            case 'Under Review':
+                return 'bg-blue-400';
+            case 'Approved':
+            case 'Agreement Sent':
+                return 'bg-purple-400';
+            case 'Contract Sent':
+                return 'bg-green-400';
+            default:
+                return 'bg-gray-300';
+        }
+    };
+
+
+    return (
+        <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            {/* Header */}
+            {!selectedVenture && (
+                <div className="mb-8 flex justify-between items-center">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            Accelerate Prime Applications <span className="text-gray-400 font-normal ml-2">({filteredVentures.length})</span>
+                        </h1>
+                        <p className="text-gray-500 mt-1">Review and manage Accelerate Prime ventures.</p>
+                    </div>
+
+                    {/* Status Filter */}
+                    <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-gray-700">Status:</label>
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                        >
+                            <option value="all">All</option>
+                            <option value="Submitted">Submitted</option>
+                            <option value="Under Review">Under Review</option>
+                            <option value="Approved">Approved</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                </div>
+            )}
+
+            {/* MASTER VIEW: Venture List (Big Cards) */}
+            {!selectedVenture ? (
+                <div className="space-y-6">
+                {loading ? (
+                    <div className="flex justify-center p-12">
+                        <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
+                    </div>
+                ) : filteredVentures.length === 0 ? (
+                    <div className="text-center p-12 bg-white rounded-2xl border border-gray-200 text-gray-400">
+                        <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No applications found</h3>
+                        <p className="text-gray-500">
+                            Ventures recommended for Accelerate Prime will appear here
+                        </p>
+                    </div>
+                ) : (
+                    filteredVentures.map(v => (
+                        <div
+                            key={v.id}
+                            onClick={() => handleVentureSelect(v)}
+                            className="bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer p-8 flex items-center justify-between group"
+                        >
+                            {/* Left Column: Identity */}
+                            <div className="space-y-4 w-1/3">
+                                <div>
+                                    <div className="flex items-center gap-3 mb-1">
+                                        {/* Status Dot */}
+                                        <div className={`w-3 h-3 rounded-full ${getStatusDotColor(v.status)}`}></div>
+                                        <h2 className="text-2xl font-bold text-gray-900 leading-tight group-hover:text-purple-700 transition-colors">
+                                            {v.name}
+                                        </h2>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-gray-500 text-sm pl-6 tracking-wide uppercase font-semibold">
+                                        <Target className="w-4 h-4" />
+                                        {v.location || v.growth_current?.city || v.city || 'Unknown City'}
+                                    </div>
+                                </div>
+
+                                <div className="pl-6 flex items-center gap-4">
+                                    {/* Program Badge */}
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200 uppercase tracking-wider">
+                                        <Briefcase className="w-3.5 h-3.5 text-purple-500" />
+                                        {v.program_recommendation || 'PENDING'}
+                                    </div>
+
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                        <Users className="w-3.5 h-3.5" />
+                                        {v.founder_name || v.growth_current?.founder_name || 'FOUNDER'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="w-px h-24 bg-gray-100 mx-4"></div>
+
+                            {/* Middle Column: Application Status */}
+                            <div className="flex-1 px-8 flex items-center justify-center">
+                                <div className="text-center">
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Application Status</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-3 h-3 rounded-full ${getStatusDotColor(v.status)}`}></div>
+                                        <span className={`text-lg font-bold ${
+                                            v.status === 'Submitted' ? 'text-yellow-600' :
+                                            v.status === 'Under Review' ? 'text-blue-600' :
+                                            v.status === 'Approved' ? 'text-green-600' :
+                                            'text-gray-600'
+                                        }`}>
+                                            {v.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Divider */}
+                            <div className="w-px h-24 bg-gray-100 mx-4"></div>
+
+                            {/* Right Column: Revenue & Action */}
+                            <div className="flex items-center gap-8 w-1/4 justify-end pl-4">
+                                <div className="text-right">
+                                    <span className="text-[10px] font-bold text-purple-500 uppercase tracking-widest block mb-1">Revenue (LTM)</span>
+                                    <div className="text-3xl font-bold text-gray-900">
+                                        {v.revenue_12m || v.commitment?.lastYearRevenue || v.commitment?.revenuePotential || 'N/A'}
+                                    </div>
+                                </div>
+
+                                <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-purple-600 group-hover:text-white transition-all transform group-hover:translate-x-1">
+                                    <Send className="w-6 h-6 rotate-0" />
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+
+                {/* Summary Stats */}
+                {!loading && filteredVentures.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-purple-600">Total Applications</p>
+                                    <p className="text-3xl font-bold text-purple-900 mt-1">{ventures.length}</p>
+                                </div>
+                                <Building2 className="w-12 h-12 text-purple-400" />
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-yellow-600">Under Review</p>
+                                    <p className="text-3xl font-bold text-yellow-900 mt-1">
+                                        {ventures.filter(v => v.status === 'Under Review').length}
+                                    </p>
+                                </div>
+                                <TrendingUp className="w-12 h-12 text-yellow-400" />
+                            </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-green-600">Approved</p>
+                                    <p className="text-3xl font-bold text-green-900 mt-1">
+                                        {ventures.filter(v => v.status === 'Approved').length}
+                                    </p>
+                                </div>
+                                <Sparkles className="w-12 h-12 text-green-400" />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+            ) : (
+                /* DETAIL VIEW: Screening Manager's Assessment */
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    {/* Back Button & Header */}
+                    <div className="border-b border-gray-100 p-4 flex items-center gap-4 bg-white sticky top-0 z-20">
+                        <Button variant="ghost" onClick={() => setSelectedVenture(null)} className="text-gray-500 hover:text-gray-900 w-auto px-3 py-2 h-auto text-sm">
+                            ← Back to Ventures
+                        </Button>
+                        <div className="h-6 w-px bg-gray-200"></div>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-lg font-bold text-gray-900">{selectedVenture.name}</h2>
+                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold">{selectedVenture.status}</span>
+                        </div>
+                    </div>
+
+                    <div className="p-8 space-y-8">
+                        {/* VSM Assessment Info Banner */}
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 flex items-start gap-3">
+                            <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold text-purple-900">Screening Manager Assessment</p>
+                                <p className="text-xs text-purple-700 mt-1">
+                                    This venture was assessed by the Screening Manager and recommended for Accelerate Prime.
+                                    {selectedVenture.vsm_reviewed_at && ` Reviewed on ${new Date(selectedVenture.vsm_reviewed_at).toLocaleDateString()}.`}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Dashboard Metrics */}
+                        <div className="grid grid-cols-4 gap-4">
+                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current Revenue</span>
+                                <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
+                                    <span className="text-sm text-gray-400">₹</span>
+                                    {selectedVenture.revenue_12m || '0'}
+                                </div>
+                            </div>
+                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Target Revenue (3Y)</span>
+                                <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
+                                    <span className="text-sm text-gray-400">₹</span>
+                                    {selectedVenture.revenue_potential_3y || '0'}
+                                </div>
+                            </div>
+                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current FTE</span>
+                                <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
+                                    <Users className="w-4 h-4 text-gray-400" />
+                                    {selectedVenture.full_time_employees || '0'}
+                                </div>
+                            </div>
+                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Target Jobs</span>
+                                <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
+                                    <Target className="w-4 h-4 text-gray-400" />
+                                    {selectedVenture.incremental_hiring || 'TBD'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Venture Context */}
+                        <div>
+                            <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 mb-6 space-y-4">
+                                <div className="grid grid-cols-3 gap-6">
+                                    <div>
+                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Founder Name</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.founder_name || selectedVenture.growth_current?.founder_name || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Role in Business</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.role || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Email</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.email || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">City / State</span>
+                                        <div className="font-medium text-gray-900">
+                                            {selectedVenture.growth_current?.city ? `${selectedVenture.growth_current.city}, ${selectedVenture.growth_current.state}` : selectedVenture.location || 'N/A'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Business Type</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.business_type || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Referred By</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.referred_by || 'N/A'}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Current vs Target Business */}
+                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                                <div className="grid grid-cols-2 divide-x divide-gray-100">
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-2 text-gray-900 font-bold border-b border-gray-100 pb-3 mb-4">
+                                            <Briefcase className="w-4 h-4 text-gray-400" />
+                                            Current Business
+                                        </div>
+                                        <div className="space-y-5">
+                                            <div>
+                                                <span className="text-xs font-bold text-gray-400 uppercase block mb-1.5">Product / Service</span>
+                                                <p className="text-sm text-gray-800 bg-gray-50/50 p-3 rounded-lg border border-gray-100 min-h-[44px] flex items-center">{selectedVenture.growth_current?.product || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-gray-400 uppercase block mb-1.5">Customer Segment</span>
+                                                <p className="text-sm text-gray-800 bg-gray-50/50 p-3 rounded-lg border border-gray-100 min-h-[44px] flex items-center">{selectedVenture.growth_current?.segment || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-gray-400 uppercase block mb-1.5">Region</span>
+                                                <p className="text-sm text-gray-800 bg-gray-50/50 p-3 rounded-lg border border-gray-100 min-h-[44px] flex items-center">{selectedVenture.growth_current?.geography || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 bg-white">
+                                        <div className="flex items-center gap-2 text-blue-900 font-bold border-b border-blue-100 pb-3 mb-4">
+                                            <TrendingUp className="w-4 h-4 text-blue-600" />
+                                            New Venture
+                                        </div>
+                                        <div className="space-y-5">
+                                            <div>
+                                                <span className="text-xs font-bold text-blue-400 uppercase block mb-1.5">New Product</span>
+                                                <p className="text-sm text-gray-800 bg-white p-3 rounded-lg border border-blue-50 min-h-[44px] flex items-center shadow-sm shadow-blue-100/50">{selectedVenture.growth_target?.product || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-blue-400 uppercase block mb-1.5">New Segment</span>
+                                                <p className="text-sm text-gray-800 bg-white p-3 rounded-lg border border-blue-50 min-h-[44px] flex items-center shadow-sm shadow-blue-100/50">{selectedVenture.growth_target?.segment || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-blue-400 uppercase block mb-1.5">New Region</span>
+                                                <p className="text-sm text-gray-800 bg-white p-3 rounded-lg border border-blue-50 min-h-[44px] flex items-center shadow-sm shadow-blue-100/50">{selectedVenture.growth_target?.geography || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* VSM Notes */}
+                        {selectedVenture.vsm_notes && (
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                                <h3 className="text-base font-bold text-gray-700 mb-4">Screening Manager Notes</h3>
+                                <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-700 whitespace-pre-wrap border border-gray-100">
+                                    {selectedVenture.vsm_notes}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* AI Analysis */}
+                        {selectedVenture.ai_analysis && (
+                            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                <div className="flex items-center gap-2 px-6 py-4 border-b border-gray-100">
+                                    <Sparkles className="w-5 h-5 text-indigo-500" />
+                                    <span className="text-base font-bold text-gray-700">AI Insights</span>
+                                </div>
+                                <div className="grid grid-cols-3 divide-x divide-gray-100">
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <TrendingUp className="w-4 h-4 text-green-500" />
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Opportunity Signal</span>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {(selectedVenture.ai_analysis.strengths || []).map((s: string, i: number) => (
+                                                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-400 flex-shrink-0" />
+                                                    {s}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Risks</span>
+                                        </div>
+                                        <ul className="space-y-2">
+                                            {(selectedVenture.ai_analysis.risks || []).map((r: string, i: number) => (
+                                                <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                                                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+                                                    {r}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                    <div className="p-6">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <HelpCircle className="w-4 h-4 text-blue-500" />
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Probing Questions</span>
+                                        </div>
+                                        <ol className="space-y-2 list-decimal list-inside">
+                                            {(selectedVenture.ai_analysis.questions || []).map((q: string, i: number) => (
+                                                <li key={i} className="text-sm text-gray-700">{q}</li>
+                                            ))}
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Program Recommendation */}
+                        <div className="bg-white rounded-xl border border-gray-200 p-6">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Briefcase className="w-5 h-5 text-gray-400" />
+                                <span className="text-base font-bold text-gray-700">Program Recommendation</span>
+                            </div>
+                            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-purple-700">Recommended Program:</span>
+                                    <span className="text-lg font-bold text-purple-900">{selectedVenture.program_recommendation}</span>
+                                </div>
+                                {selectedVenture.internal_comments && (
+                                    <div className="mt-3 pt-3 border-t border-purple-200">
+                                        <span className="text-xs font-bold text-purple-600 uppercase block mb-2">Internal Comments</span>
+                                        <p className="text-sm text-purple-800 whitespace-pre-wrap">{selectedVenture.internal_comments}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Journey Roadmap */}
+                        <div className="bg-gradient-to-br from-indigo-50 to-white rounded-2xl border border-indigo-200 p-8 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg">
+                                        <Sparkles className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900">Generate Journey Roadmap</h2>
+                                        <p className="text-sm text-indigo-600 font-semibold flex items-center gap-1.5">
+                                            <Zap className="w-3.5 h-3.5" />
+                                            Uses AI Insights
+                                        </p>
+                                    </div>
+                                </div>
+                                {!roadmapGenerated && (
+                                    <button
+                                        onClick={generateRoadmap}
+                                        disabled={generatingRoadmap}
+                                        className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:opacity-60 text-white font-semibold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                    >
+                                        {generatingRoadmap ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Generating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="w-5 h-5" />
+                                                Generate Roadmap
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
+                            {roadmapGenerated ? (
+                                <>
+                                    <div className="mb-8 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg p-3">
+                                        <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-sm font-semibold text-green-900">AI-powered roadmap generated successfully</p>
+                                    </div>
+                                    <p className="text-sm text-gray-500 mb-8 uppercase tracking-wider font-semibold">Deliverables & Milestones</p>
+                                </>
+                            ) : (
+                                <div className="py-12 text-center">
+                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center mx-auto mb-4">
+                                        <Map className="w-10 h-10 text-indigo-600" />
+                                    </div>
+                                    <h3 className="text-lg font-bold text-gray-900 mb-2">AI-Powered Journey Roadmap</h3>
+                                    <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
+                                        Generate a personalized roadmap with deliverables and milestones across all six streams using AI insights from the Screening Manager's assessment.
+                                    </p>
+                                </div>
+                            )}
+
+                            {roadmapGenerated && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {/* Product */}
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Product</h3>
+                                        <ChevronRight className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Core API Specs</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Technical specifications for public and internal endpoints.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">UI Design System</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Global Figma library and component standards.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">V1.2 Integration</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Middleware bridge for legacy data retrofitting.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Infrastructure</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Multi-region cloud deployment strategy.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Unit Testing</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Standardized QA suite for core services.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Security Audit</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Third-party penetration testing and compliance.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* GTM */}
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">GTM</h3>
+                                        <ChevronRight className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">ICP Definition</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Detailed profile of high-value manufacturing clients.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Distribution</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Partner channel mapping and commission structures.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Referral Program</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Incentive model for existing customer advocacy.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Partner Ecosystem</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Integration directory for third-party providers.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Pricing Strategy</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Tiered subscription and volume discount model.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Sales Launch</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Regional enablement kit for direct sales teams.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Funding */}
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Funding</h3>
+                                        <ChevronRight className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Series A Pitch</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Updated narrative for institutional growth rounds.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Financial Metrics</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Historical performance and 24-month projections.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Data Room</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Encrypted document repository for due diligence.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Investor Outreach</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">CRM tracking for potential VC partners.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Financial Model</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Excel-based dynamic budget and burn calculator.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Exit Strategy</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">M&A landscape analysis and valuation benchmarks.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Supply Chain */}
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Supply Chain</h3>
+                                        <ChevronRight className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Lead Time Gap</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Analysis of hardware delays vs scaling targets.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Vendor Review</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Quarterly performance scorecard for key suppliers.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Inventory Forecast</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">AI-driven predictive stock requirements.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Logistics Audit</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Freight cost optimization and route analysis.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Compliance Review</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Regulatory certification status for global trade.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Safety Stock</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Buffering strategy for mission-critical components.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Operations */}
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Operations</h3>
+                                        <ChevronRight className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">ERP Integration</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Centralized management of ops and finance.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Team Training</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Internal platform for onboarding new staff.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Automation</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Standardization of routine warehouse tasks.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Office Expansion</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Real estate planning for the EMEA headquarters.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Compliance Audit</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Internal review of data privacy and safety.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Disaster Recovery</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Backup protocols and emergency business plan.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Team */}
+                                <div className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h3 className="text-sm font-bold text-blue-600 uppercase tracking-wider">Team</h3>
+                                        <ChevronRight className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Hiring Handbook</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Standardized interview and offer procedures.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-orange-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Appraisal Framework</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Semi-annual performance review methodology.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Individual Metrics</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">KPI dashboards for all department leads.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Equity Program</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Option pool allocation and vesting schedules.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Culture Workshop</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Mission alignment for remote global teams.</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-2 h-2 rounded-full bg-gray-400 flex-shrink-0 mt-2" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-gray-900">Benefits Overhaul</p>
+                                                <p className="text-xs text-gray-500 italic mt-0.5">Comparison study of regional health plans.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            )}
+                        </div>
+
+                        {/* Commitment & Approval Section */}
+                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-gray-50 to-white">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle className="w-5 h-5 text-gray-400" />
+                                    <span className="text-base font-bold text-gray-700">Commitment & Approval</span>
+                                </div>
+                                {selectedVenture.status === 'Agreement Sent' && (
+                                    <span className="text-xs text-green-600 font-medium bg-green-50 px-3 py-1 rounded-full border border-green-200">
+                                        ✓ Agreement Sent
+                                    </span>
+                                )}
+                                {selectedVenture.status === 'Contract Sent' && (
+                                    <span className="text-xs text-purple-600 font-medium bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                                        ✓ Contract Sent
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="p-6 space-y-5">
+                                {/* Support Provided */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                        Support Provided
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={supportProvided}
+                                        onChange={(e) => setSupportProvided(e.target.value)}
+                                        placeholder="e.g., Mentorship, Funding, Resources..."
+                                        className="w-full p-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none text-sm text-gray-800 placeholder:text-gray-400"
+                                    />
+                                </div>
+
+                                {/* Program Selection */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                        Program
+                                    </label>
+                                    <select
+                                        value={selectedProgram}
+                                        onChange={(e) => setSelectedProgram(e.target.value)}
+                                        className="w-full p-3 bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none text-sm text-gray-800"
+                                    >
+                                        <option value="Accelerate Prime">Accelerate Prime</option>
+                                        <option value="Accelerate Select">Accelerate Select</option>
+                                        <option value="Accelerate Core">Accelerate Core</option>
+                                    </select>
+                                </div>
+
+                                {/* Comments */}
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                        Comments
+                                    </label>
+                                    <textarea
+                                        value={ventureComments}
+                                        onChange={(e) => setVentureComments(e.target.value)}
+                                        placeholder="Add any notes or comments about the commitment..."
+                                        className="w-full h-32 p-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none text-sm text-gray-700 placeholder:text-gray-400 resize-none"
+                                    />
+                                </div>
+
+                                {/* Status-based CTAs */}
+                                <div className="pt-4 border-t border-gray-100">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                                Current Status:
+                                            </label>
+                                            <select
+                                                value={selectedVenture.status}
+                                                onChange={(e) => handleStatusChange(e.target.value)}
+                                                disabled={savingCommitment}
+                                                className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                <option value="Submitted">Submitted</option>
+                                                <option value="Under Review">Under Review</option>
+                                                <option value="Approved">Approved</option>
+                                                <option value="Agreement Sent">Agreement Sent</option>
+                                                <option value="Contract Sent">Contract Sent</option>
+                                                <option value="Rejected">Rejected</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            {selectedVenture.status === 'Under Review' && (
+                                                <button
+                                                    onClick={() => handleApproveAndSend('agreement')}
+                                                    disabled={savingCommitment}
+                                                    className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 text-white font-semibold transition-all shadow-md hover:shadow-lg"
+                                                >
+                                                    {savingCommitment ? (
+                                                        <>
+                                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                                            Sending...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <FileText className="w-5 h-5" />
+                                                            Approve & Send Agreement
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+
+                                            {selectedVenture.status === 'Agreement Sent' && (
+                                                <button
+                                                    onClick={() => handleApproveAndSend('contract')}
+                                                    disabled={savingCommitment}
+                                                    className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-60 text-white font-semibold transition-all shadow-md hover:shadow-lg"
+                                                >
+                                                    {savingCommitment ? (
+                                                        <>
+                                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                                            Sending...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <CheckCircle className="w-5 h-5" />
+                                                            Send Contract
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+
+                                            {selectedVenture.status === 'Contract Sent' && (
+                                                <div className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+                                                    <CheckCircle className="w-5 h-5 text-green-600" />
+                                                    <span className="font-semibold text-gray-700">Contract Sent - Awaiting Signature</span>
+                                                </div>
+                                            )}
+
+                                            {selectedVenture.status === 'Submitted' && (
+                                                <button
+                                                    onClick={() => handleApproveAndSend('agreement')}
+                                                    disabled={savingCommitment}
+                                                    className="flex items-center gap-2 px-6 py-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-60 text-white font-semibold transition-all shadow-md hover:shadow-lg"
+                                                >
+                                                    {savingCommitment ? (
+                                                        <>
+                                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                                            Sending...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <FileText className="w-5 h-5" />
+                                                            Approve & Send Agreement
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
