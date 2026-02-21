@@ -7,11 +7,12 @@ export interface Venture {
     id: string;
     name: string;
     description: string;
-    status: 'Draft' | 'Submitted' | 'Under Review' | 'Approved' | 'Rejected';
+    status: 'Draft' | 'Submitted' | 'Under Review' | 'Approved' | 'Rejected' | 'Agreement Sent' | 'Contract Sent';
     program: 'Accelerate' | 'Ignite' | 'Liftoff';
     location: string;
     submittedAt: string;
     agreement_status?: 'Draft' | 'Sent' | 'Signed';
+    workbench_locked?: boolean;
 }
 
 interface VentureCardProps {
@@ -56,18 +57,21 @@ export const VentureCard: React.FC<VentureCardProps> = ({ venture }) => {
             </div>
 
             <div className="grid grid-cols-2 gap-3 pt-5 border-t border-gray-100">
-                {venture.agreement_status === 'Draft' || !venture.agreement_status ? (
+                {venture.status === 'Contract Sent' || venture.workbench_locked ? (
+                    // Contract sent - need to review and sign
                     <Button
-                        className="bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-100 shadow-none font-medium text-sm py-2.5"
-                        disabled
-                        onClick={(e) => e.stopPropagation()}
+                        className="bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-200 shadow-none font-medium text-sm py-2.5"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/dashboard/venture/${venture.id}/workbench`);
+                        }}
                     >
                         <LayoutGrid className="w-4 h-4 mr-2" />
-                        Workbench Locked
+                        Review Contract
                     </Button>
-                ) : (
+                ) : venture.agreement_status === 'Signed' ? (
+                    // Agreement signed - workbench unlocked
                     <Button
-                        // Primary Action
                         className="bg-gray-900 text-white hover:bg-black border-none text-sm py-2.5"
                         onClick={(e) => {
                             e.stopPropagation();
@@ -76,6 +80,16 @@ export const VentureCard: React.FC<VentureCardProps> = ({ venture }) => {
                     >
                         <LayoutGrid className="w-4 h-4 mr-2" />
                         Workbench
+                    </Button>
+                ) : (
+                    // Waiting for agreement - locked
+                    <Button
+                        className="bg-gray-50 text-gray-400 cursor-not-allowed border border-gray-100 shadow-none font-medium text-sm py-2.5"
+                        disabled
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <LayoutGrid className="w-4 h-4 mr-2" />
+                        Workbench Locked
                     </Button>
                 )}
                 <Button
