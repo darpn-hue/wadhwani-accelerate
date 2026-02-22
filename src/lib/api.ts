@@ -195,7 +195,7 @@ class ApiClient {
     }
 
     async submitVenture(id: string) {
-        const { data, error } = await supabase
+        const { data, error} = await supabase
             .from('ventures')
             .update({ status: 'Submitted' })
             .eq('id', id)
@@ -204,6 +204,59 @@ class ApiClient {
 
         if (error) throw error;
         return { venture: data };
+    }
+
+    // ============ INTERACTION ENDPOINTS ============
+
+    async getInteractions(ventureId: string) {
+        const { data, error } = await supabase
+            .from('venture_interactions')
+            .select('*, created_by_user:users!venture_interactions_created_by_fkey(id, email)')
+            .eq('venture_id', ventureId)
+            .is('deleted_at', null)
+            .order('interaction_date', { ascending: false });
+
+        if (error) throw error;
+        return { interactions: data || [] };
+    }
+
+    async createInteraction(ventureId: string, data: any) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('Not authenticated');
+
+        const { data: interaction, error } = await supabase
+            .from('venture_interactions')
+            .insert({
+                venture_id: ventureId,
+                created_by: user.id,
+                ...data
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { interaction };
+    }
+
+    async updateInteraction(id: string, data: any) {
+        const { data: interaction, error } = await supabase
+            .from('venture_interactions')
+            .update(data)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return { interaction };
+    }
+
+    async deleteInteraction(id: string) {
+        const { error } = await supabase
+            .from('venture_interactions')
+            .update({ deleted_at: new Date().toISOString() })
+            .eq('id', id);
+
+        if (error) throw error;
     }
 }
 
