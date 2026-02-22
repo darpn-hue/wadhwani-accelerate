@@ -3,6 +3,7 @@ import { Building2, Sparkles, TrendingUp, Loader2, Briefcase, Users, Target, Sen
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
+import { InteractionsSection } from '../components/Interactions/InteractionsSection';
 
 interface Venture {
     id: string;
@@ -975,6 +976,9 @@ export const VentureManagerDashboard: React.FC = () => {
                             </div>
                             )}
                         </div>
+
+                        {/* Interactions Section */}
+                        <InteractionsSection ventureId={selectedVenture.id} />
 
                         {/* Commitment & Approval Section */}
                         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">

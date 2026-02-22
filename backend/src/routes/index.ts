@@ -2,6 +2,7 @@ import { Router } from 'express';
 import healthRoutes from './health';
 import authRoutes from './auth';
 import ventureRoutes from './ventures';
+import interactionRoutes from './interactions';
 
 const router = Router();
 
@@ -9,5 +10,6 @@ const router = Router();
 router.use(healthRoutes); // Mount health directly
 router.use('/auth', authRoutes);
 router.use('/ventures', ventureRoutes);
+router.use('/api', interactionRoutes); // Interactions routes (nested under ventures)
 
 export default router;
