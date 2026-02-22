@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Plus, Loader2 } from 'lucide-react';
-import { Interaction } from '../../types/interactions';
+import type { Interaction } from '../../types/interactions';
 import { api } from '../../lib/api';
 import { InteractionCard } from './InteractionCard';
 import { AddInteractionModal } from './AddInteractionModal';

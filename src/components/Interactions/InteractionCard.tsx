@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Phone, Video, Mail, FileText, Calendar, Clock, Users as UsersIcon, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Interaction } from '../../types/interactions';
+import type { Interaction } from '../../types/interactions';
 
 interface InteractionCardProps {
     interaction: Interaction;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Loader2, Phone, Video, Mail, FileText } from 'lucide-react';
-import { CreateInteractionInput } from '../../types/interactions';
+import type { CreateInteractionInput } from '../../types/interactions';
 
 interface AddInteractionModalProps {
     onClose: () => void;
