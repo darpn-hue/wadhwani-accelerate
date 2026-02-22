@@ -224,24 +224,6 @@ export const VentureManagerDashboard: React.FC = () => {
         ? ventures
         : ventures.filter(v => v.status === statusFilter);
 
-    // Helper to get status dot color
-    const getStatusDotColor = (status: string) => {
-        switch (status) {
-            case 'Submitted':
-                return 'bg-yellow-400';
-            case 'Under Review':
-                return 'bg-blue-400';
-            case 'Approved':
-            case 'Agreement Sent':
-                return 'bg-purple-400';
-            case 'Contract Sent':
-                return 'bg-green-400';
-            default:
-                return 'bg-gray-300';
-        }
-    };
-
-
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
             {/* Header */}
@@ -297,50 +279,34 @@ export const VentureManagerDashboard: React.FC = () => {
                             {/* Left Column: Identity */}
                             <div className="space-y-4 w-1/3">
                                 <div>
-                                    <div className="flex items-center gap-3 mb-1">
-                                        {/* Status Dot */}
-                                        <div className={`w-3 h-3 rounded-full ${getStatusDotColor(v.status)}`}></div>
-                                        <h2 className="text-2xl font-bold text-gray-900 leading-tight group-hover:text-purple-700 transition-colors">
-                                            {v.name}
-                                        </h2>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-gray-500 text-sm pl-6 tracking-wide uppercase font-semibold">
+                                    <h2 className="text-2xl font-bold text-gray-900 leading-tight group-hover:text-purple-700 transition-colors mb-1">
+                                        {v.name}
+                                    </h2>
+                                    <div className="flex items-center gap-2 text-gray-500 text-sm tracking-wide uppercase font-semibold">
                                         <Target className="w-4 h-4" />
                                         {v.location || v.growth_current?.city || v.city || 'Unknown City'}
                                     </div>
                                 </div>
 
-                                <div className="pl-6 flex items-center gap-4">
-                                    {/* Program Badge */}
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-50 px-3 py-1.5 rounded-full border border-purple-200 uppercase tracking-wider">
-                                        <Briefcase className="w-3.5 h-3.5 text-purple-500" />
-                                        {v.program_recommendation || 'PENDING'}
-                                    </div>
-
-                                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                        <Users className="w-3.5 h-3.5" />
-                                        {v.founder_name || v.growth_current?.founder_name || 'FOUNDER'}
-                                    </div>
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                    <Users className="w-3.5 h-3.5" />
+                                    {v.founder_name || v.growth_current?.founder_name || 'FOUNDER'}
                                 </div>
                             </div>
 
                             {/* Divider */}
                             <div className="w-px h-24 bg-gray-100 mx-4"></div>
 
-                            {/* Middle Column: Application Status */}
+                            {/* Middle Column: Program Status */}
                             <div className="flex-1 px-8 flex items-center justify-center">
                                 <div className="text-center">
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Application Status</p>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-3 h-3 rounded-full ${getStatusDotColor(v.status)}`}></div>
-                                        <span className={`text-lg font-bold ${
-                                            v.status === 'Submitted' ? 'text-yellow-600' :
-                                            v.status === 'Under Review' ? 'text-blue-600' :
-                                            v.status === 'Approved' ? 'text-green-600' :
-                                            'text-gray-600'
-                                        }`}>
-                                            {v.status}
-                                        </span>
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Program Status</span>
+                                    <div className={`px-5 py-2.5 rounded-full text-sm font-bold ${
+                                        v.program_recommendation
+                                            ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                            : 'bg-gray-50 text-gray-600 border border-gray-200'
+                                    }`}>
+                                        {v.program_recommendation || 'Pending Review'}
                                     </div>
                                 </div>
                             </div>
@@ -349,10 +315,10 @@ export const VentureManagerDashboard: React.FC = () => {
                             <div className="w-px h-24 bg-gray-100 mx-4"></div>
 
                             {/* Right Column: Revenue & Action */}
-                            <div className="flex items-center gap-8 w-1/4 justify-end pl-4">
-                                <div className="text-right">
-                                    <span className="text-[10px] font-bold text-purple-500 uppercase tracking-widest block mb-1">Revenue (LTM)</span>
-                                    <div className="text-3xl font-bold text-gray-900">
+                            <div className="flex items-center gap-6 w-1/4 justify-end pl-4">
+                                <div className="text-center">
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Revenue (LTM)</span>
+                                    <div className="text-2xl font-bold text-gray-900">
                                         {v.revenue_12m || v.commitment?.lastYearRevenue || v.commitment?.revenuePotential || 'N/A'}
                                     </div>
                                 </div>
@@ -566,7 +532,7 @@ export const VentureManagerDashboard: React.FC = () => {
                                     <div className="p-6">
                                         <div className="flex items-center gap-2 mb-4">
                                             <TrendingUp className="w-4 h-4 text-green-500" />
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Opportunity Signal</span>
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">PROS</span>
                                         </div>
                                         <ul className="space-y-2">
                                             {(selectedVenture.ai_analysis.strengths || []).map((s: string, i: number) => (
@@ -580,7 +546,7 @@ export const VentureManagerDashboard: React.FC = () => {
                                     <div className="p-6">
                                         <div className="flex items-center gap-2 mb-4">
                                             <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Risks</span>
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">CONS</span>
                                         </div>
                                         <ul className="space-y-2">
                                             {(selectedVenture.ai_analysis.risks || []).map((r: string, i: number) => (
