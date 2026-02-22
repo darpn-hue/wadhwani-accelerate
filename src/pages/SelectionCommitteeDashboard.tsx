@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Building2, Sparkles, TrendingUp, Loader2, Briefcase, Users, Target, Send, AlertTriangle, HelpCircle, CheckCircle, FileText } from 'lucide-react';
+import { Building2, Sparkles, TrendingUp, Loader2, Briefcase, Users, Target, Send, AlertTriangle, HelpCircle, Map, ChevronRight, Zap, CheckCircle, FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/Button';
@@ -37,6 +37,8 @@ export const SelectionCommitteeDashboard: React.FC = () => {
     const [selectedVenture, setSelectedVenture] = useState<Venture | null>(null);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
+    const [roadmapGenerated, setRoadmapGenerated] = useState(false);
 
     // Commitment & Approval State
     const [selectedProgram, setSelectedProgram] = useState('Accelerate Core');
@@ -89,6 +91,7 @@ export const SelectionCommitteeDashboard: React.FC = () => {
     const handleVentureSelect = async (venture: Venture) => {
         // Optimistically set selected to show UI immediately
         setSelectedVenture(venture);
+        setRoadmapGenerated(false); // Reset roadmap when selecting new venture
 
         // Fetch fresh details with streams
         try {
@@ -121,6 +124,18 @@ export const SelectionCommitteeDashboard: React.FC = () => {
         } catch (error) {
             console.error('Error fetching venture details:', error);
         }
+    };
+
+    const generateRoadmap = async () => {
+        if (!selectedVenture) return;
+
+        setGeneratingRoadmap(true);
+
+        // Simulate AI roadmap generation (2 seconds)
+        setTimeout(() => {
+            setGeneratingRoadmap(false);
+            setRoadmapGenerated(true);
+        }, 2000);
     };
 
     const handleStatusChange = async (newStatus: string) => {
