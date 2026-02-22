@@ -10,7 +10,6 @@ import {
     Target,
     TrendingUp,
     Users,
-    Circle,
     ChevronUp,
     AlertTriangle,
     HelpCircle,
