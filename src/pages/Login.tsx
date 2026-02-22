@@ -28,7 +28,9 @@ export const Login: React.FC = () => {
                 navigate('/dashboard/new-application');
             } else if (email.includes('ravi') || email === 'ravi@wadhwani.com') {
                 navigate('/vmanager/dashboard');
-            } else if (email.includes('admin') || email.includes('rajesh') || email.includes('committee')) {
+            } else if (email.includes('meetul') || email.includes('committee')) {
+                navigate('/committee/dashboard');
+            } else if (email.includes('admin') || email.includes('rajesh')) {
                 navigate('/vsm/dashboard');
             } else {
                 navigate('/dashboard');
@@ -53,9 +55,9 @@ export const Login: React.FC = () => {
         } else if (role === 'venture_mgr') {
             demoEmail = 'ravi@wadhwani.com';
             demoPassword = 'password';
-        } else if (role === 'committee') {
-            demoEmail = 'committee@admin.com';
-            demoPassword = 'admin123';
+        } else if (role === 'committee_member') {
+            demoEmail = 'meetul@wadhwani.com';
+            demoPassword = 'password';
         }
 
         setEmail(demoEmail);
@@ -73,8 +75,8 @@ export const Login: React.FC = () => {
                 navigate('/vsm/dashboard');
             } else if (role === 'venture_mgr') {
                 navigate('/vmanager/dashboard');
-            } else if (role === 'committee') {
-                navigate('/vsm/dashboard');
+            } else if (role === 'committee_member') {
+                navigate('/committee/dashboard');
             } else {
                 navigate('/dashboard');
             }
@@ -166,7 +168,7 @@ export const Login: React.FC = () => {
                             Venture Manager
                         </button>
                         <button
-                            onClick={() => handleDemoLogin('committee')}
+                            onClick={() => handleDemoLogin('committee_member')}
                             className="w-full bg-white border border-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-50 font-medium transition-colors flex items-center justify-center gap-2"
                         >
                             <Users className="w-4 h-4 text-indigo-600" />
@@ -179,7 +181,7 @@ export const Login: React.FC = () => {
                         <div>Venture: vipul@wadhwani.com / password</div>
                         <div>Screening Mgr: rajesh@wadhwani.com / password</div>
                         <div>Venture Mgr: ravi@wadhwani.com / password</div>
-                        <div>Committee: committee@admin.com / admin123</div>
+                        <div>Committee: meetul@wadhwani.com / password</div>
                     </div>
                 </div>
 

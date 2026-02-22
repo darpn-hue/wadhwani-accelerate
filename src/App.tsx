@@ -11,6 +11,7 @@ import { AuthProvider } from './context/AuthContext';
 import { VSMDashboardLayout } from './layouts/VSMDashboardLayout';
 import { VSMDashboard } from './pages/VSMDashboard';
 import { VentureManagerDashboard } from './pages/VentureManagerDashboard';
+import { SelectionCommitteeDashboard } from './pages/SelectionCommitteeDashboard';
 
 import { VentureWorkbench } from './pages/VentureWorkbench';
 
@@ -92,7 +93,10 @@ function App() {
             <Route index element={<VentureManagerDashboard />} />
           </Route>
 
-
+          {/* Selection Committee Dashboard Routes */}
+          <Route path="/committee/dashboard" element={<VSMDashboardLayout />}>
+            <Route index element={<SelectionCommitteeDashboard />} />
+          </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS venture_interactions (
     transcript TEXT NOT NULL, -- Call transcript or meeting notes
 
     -- Context
-    created_by UUID REFERENCES users(id),
+    created_by UUID REFERENCES auth.users(id),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     interaction_date TIMESTAMP DEFAULT NOW(), -- When the actual call/meeting happened
