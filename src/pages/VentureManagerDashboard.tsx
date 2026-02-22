@@ -407,16 +407,19 @@ export const VentureManagerDashboard: React.FC = () => {
             ) : (
                 /* DETAIL VIEW: Screening Manager's Assessment */
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    {/* Back Button & Header */}
-                    <div className="border-b border-gray-100 p-4 flex items-center gap-4 bg-white sticky top-0 z-20">
+                    {/* Back Button */}
+                    <div className="border-b border-gray-100 px-6 py-3 bg-gray-50">
                         <Button variant="ghost" onClick={() => setSelectedVenture(null)} className="text-gray-500 hover:text-gray-900 w-auto px-3 py-2 h-auto text-sm">
                             ← Back to Ventures
                         </Button>
-                        <div className="h-6 w-px bg-gray-200"></div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-bold text-gray-900">{selectedVenture.name}</h2>
-                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold">{selectedVenture.status}</span>
-                        </div>
+                    </div>
+
+                    {/* Header: Company Name Left, Status Right */}
+                    <div className="border-b border-gray-100 px-6 py-5 bg-white flex items-center justify-between sticky top-0 z-20">
+                        <h2 className="text-2xl font-bold text-gray-900">{selectedVenture.name}</h2>
+                        <span className="px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-bold">
+                            {selectedVenture.status}
+                        </span>
                     </div>
 
                     <div className="p-8 space-y-8">
@@ -437,7 +440,7 @@ export const VentureManagerDashboard: React.FC = () => {
                         </div>
 
                         {/* Dashboard Metrics */}
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current Revenue</span>
                                 <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
@@ -453,17 +456,10 @@ export const VentureManagerDashboard: React.FC = () => {
                                 </div>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current FTE</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current Full Time Employees</span>
                                 <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
                                     <Users className="w-4 h-4 text-gray-400" />
                                     {selectedVenture.full_time_employees || '0'}
-                                </div>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Target Jobs</span>
-                                <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
-                                    <Target className="w-4 h-4 text-gray-400" />
-                                    {selectedVenture.incremental_hiring || 'TBD'}
                                 </div>
                             </div>
                         </div>

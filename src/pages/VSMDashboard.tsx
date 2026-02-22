@@ -14,7 +14,8 @@ import {
     ChevronUp,
     AlertTriangle,
     HelpCircle,
-    Plus
+    Plus,
+    FileText
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { useAuth } from '../context/AuthContext';
@@ -52,24 +53,40 @@ interface Venture {
     vsm_reviewed_at?: string; // Timestamp when VSM reviewed
 }
 
-const OtherDetailsSection: React.FC<{ vsmNotes: string; setVsmNotes: (v: string) => void }> = ({ vsmNotes, setVsmNotes }) => {
-    const [open, setOpen] = useState(false);
+const OtherDetailsSection: React.FC<{ selectedVenture: any; vsmNotes: string; setVsmNotes: (v: string) => void }> = ({ selectedVenture, vsmNotes, setVsmNotes }) => {
+    const [open, setOpen] = useState(true);
     return (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <button onClick={() => setOpen(o => !o)} className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors">
-                <span className="text-base font-bold text-gray-700">Other details <span className="text-gray-400 font-normal text-sm">(optional)</span></span>
+                <span className="text-base font-bold text-gray-700">Other support details the venture is seeking from the program</span>
                 <div className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-gray-400 transition-colors">
                     {open ? <ChevronUp className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 </div>
             </button>
             {open && (
-                <div className="px-6 pb-6">
-                    <textarea
-                        className="w-full h-36 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none resize-none transition"
-                        placeholder="Paste your call transcript here or add notes from the call you had with the business…"
-                        value={vsmNotes}
-                        onChange={e => setVsmNotes(e.target.value)}
-                    />
+                <div className="px-6 pb-6 space-y-4">
+                    {/* Venture's Support Request from Application Form */}
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                            Support Description (from application)
+                        </label>
+                        <div className="w-full min-h-[120px] rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700">
+                            {selectedVenture.support_request || 'No support description provided'}
+                        </div>
+                    </div>
+
+                    {/* VSM Notes */}
+                    <div>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                            Screening Manager Notes (optional)
+                        </label>
+                        <textarea
+                            className="w-full h-36 rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none resize-none transition"
+                            placeholder="Add your notes from the call or assessment here..."
+                            value={vsmNotes}
+                            onChange={e => setVsmNotes(e.target.value)}
+                        />
+                    </div>
                 </div>
             )}
         </div>
@@ -108,7 +125,7 @@ const AIInsightsSection: React.FC<{ selectedVenture: any; vsmNotes: string; anal
                 <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
                         <TrendingUp className="w-4 h-4 text-green-500" />
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Opportunity signal</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">PROS</span>
                     </div>
                     <ul className="space-y-2">
                         {(analysisResult.strengths || []).map((s: string, i: number) => (
@@ -122,7 +139,7 @@ const AIInsightsSection: React.FC<{ selectedVenture: any; vsmNotes: string; anal
                 <div className="p-6">
                     <div className="flex items-center gap-2 mb-4">
                         <AlertTriangle className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Risks</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">CONS</span>
                     </div>
                     <ul className="space-y-2">
                         {(analysisResult.risks || []).map((r: string, i: number) => (
@@ -196,7 +213,6 @@ const RecommendProgramSection: React.FC<{
                     <option value="Accelerate Core">Accelerate Core (Early Stage)</option>
                     <option value="Accelerate Select">Accelerate Select (Growth Stage)</option>
                     <option value="Accelerate Prime">Accelerate Prime (Scaling)</option>
-                    <option value="Reject">Not Suitable</option>
                 </select>
             </div>
             {userRole === 'committee' && (
@@ -493,40 +509,6 @@ export const VSMDashboard: React.FC = () => {
         }
     };
 
-    // Helper to get status color for streams
-    const getStreamStatusColor = (streamName: string, venture: Venture) => {
-        // Map display name to DB name if needed
-        const dbStreamName = streamName === 'Supply Chain' ? 'SupplyChain' : streamName;
-        const need = venture.needs.find(n => n.stream === dbStreamName);
-        if (!need) return 'bg-gray-200';
-
-        const legacyMapping: Record<string, string> = {
-            'Not started': 'Working on it',
-            'On track': 'No help needed',
-            'Need some advice': 'Need guidance',
-            'Completed': 'No help needed',
-            'Done': 'No help needed'
-        };
-
-        const mappedStatus = legacyMapping[need.status] || need.status;
-        const normalizedStatus = Object.keys(STATUS_CONFIG).find(
-            key => key.toLowerCase() === mappedStatus?.toLowerCase()
-        );
-
-        if (normalizedStatus && STATUS_CONFIG[normalizedStatus]) {
-            // Map text color class to background color class (e.g., text-green-600 -> bg-green-500)
-            const textColor = STATUS_CONFIG[normalizedStatus].color;
-            if (textColor.includes('green')) return 'bg-green-500';
-            if (textColor.includes('blue')) return 'bg-blue-500';
-            if (textColor.includes('amber')) return 'bg-amber-500';
-            if (textColor.includes('red')) return 'bg-red-500';
-        }
-
-        return 'bg-gray-200';
-    };
-
-    const STREAMS = ['Product', 'GTM', 'Funding', 'Supply Chain', 'Operations', 'Team'];
-
     return (
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
 
@@ -563,49 +545,34 @@ export const VSMDashboard: React.FC = () => {
                                 {/* Left Column: Identity */}
                                 <div className="space-y-4 w-1/3">
                                     <div>
-                                        <div className="flex items-center gap-3 mb-1">
-                                            {/* Status Dot */}
-                                            <div className={`w-3 h-3 rounded-full ${v.status === 'Submitted' ? 'bg-yellow-400' :
-                                                v.status === 'Under Review' ? 'bg-blue-400' :
-                                                    v.status === 'Agreement Sent' ? 'bg-purple-400' :
-                                                        v.status === 'Contract Sent' ? 'bg-green-400' : 'bg-gray-300'
-                                                }`}></div>
-                                            <h2 className="text-2xl font-bold text-gray-900 leading-tight group-hover:text-blue-700 transition-colors">
-                                                {v.name}
-                                            </h2>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-gray-500 text-sm pl-6 tracking-wide uppercase font-semibold">
+                                        <h2 className="text-2xl font-bold text-gray-900 leading-tight group-hover:text-blue-700 transition-colors mb-1">
+                                            {v.name}
+                                        </h2>
+                                        <div className="flex items-center gap-2 text-gray-500 text-sm tracking-wide uppercase font-semibold">
                                             <Target className="w-4 h-4" />
                                             {v.location || v.growth_current?.city || 'Unknown City'}
                                         </div>
                                     </div>
 
-                                    <div className="pl-6 flex items-center gap-4">
-                                        {/* Program Badge */}
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100 uppercase tracking-wider">
-                                            <Briefcase className="w-3.5 h-3.5 text-gray-400" />
-                                            {v.program_recommendation || 'PENDING'}
-                                        </div>
-
-                                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                                            <Users className="w-3.5 h-3.5" />
-                                            {v.founder_name || v.growth_current?.founder_name || 'FOUNDER'}
-                                        </div>
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                                        <Users className="w-3.5 h-3.5" />
+                                        {v.founder_name || v.growth_current?.founder_name || 'FOUNDER'}
                                     </div>
                                 </div>
 
                                 {/* Divider */}
                                 <div className="w-px h-24 bg-gray-100 mx-4"></div>
 
-                                {/* Middle Column: Stream Status Grid */}
-                                <div className="flex-1 px-8">
-                                    <div className="grid grid-cols-3 gap-y-6 gap-x-8">
-                                        {STREAMS.map(stream => (
-                                            <div key={stream} className="flex flex-col items-center gap-2">
-                                                <div className={`w-4 h-4 rounded-full ${getStreamStatusColor(stream, v)}`}></div>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stream}</span>
-                                            </div>
-                                        ))}
+                                {/* Middle Column: Program Status */}
+                                <div className="flex-1 px-8 flex items-center justify-center">
+                                    <div className="text-center">
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Program Status</span>
+                                        <div className={`px-5 py-2.5 rounded-full text-sm font-bold ${v.program_recommendation
+                                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                            : 'bg-gray-50 text-gray-600 border border-gray-200'
+                                        }`}>
+                                            {v.program_recommendation || 'Pending Review'}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -613,10 +580,10 @@ export const VSMDashboard: React.FC = () => {
                                 <div className="w-px h-24 bg-gray-100 mx-4"></div>
 
                                 {/* Right Column: Revenue & Action */}
-                                <div className="flex items-center gap-8 w-1/4 justify-end pl-4">
-                                    <div className="text-right">
-                                        <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest block mb-1">Revenue (LTM)</span>
-                                        <div className="text-3xl font-bold text-gray-900">{v.revenue_12m || v.commitment?.lastYearRevenue || v.commitment?.revenuePotential || 'N/A'}</div>
+                                <div className="flex items-center gap-6 w-1/4 justify-end pl-4">
+                                    <div className="text-center">
+                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-3">Revenue (LTM)</span>
+                                        <div className="text-2xl font-bold text-gray-900">{v.revenue_12m || v.commitment?.lastYearRevenue || v.commitment?.revenuePotential || 'N/A'}</div>
                                     </div>
 
                                     <div className="w-14 h-14 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:bg-blue-600 group-hover:text-white transition-all transform group-hover:translate-x-1">
@@ -631,21 +598,24 @@ export const VSMDashboard: React.FC = () => {
                 /* DETAIL VIEW: Full Screen Venture Assessment */
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative">
 
-                    {/* Back Button & Header */}
-                    <div className="border-b border-gray-100 p-4 flex items-center gap-4 bg-white sticky top-0 z-20">
+                    {/* Back Button */}
+                    <div className="border-b border-gray-100 px-6 py-3 bg-gray-50">
                         <Button variant="ghost" onClick={() => setSelectedVenture(null)} className="text-gray-500 hover:text-gray-900 w-auto px-3 py-2 h-auto text-sm">
                             ← Back to Ventures
                         </Button>
-                        <div className="h-6 w-px bg-gray-200"></div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-lg font-bold text-gray-900">{selectedVenture.name}</h2>
-                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold">{selectedVenture.status}</span>
-                        </div>
+                    </div>
+
+                    {/* Header: Company Name Left, Status Right */}
+                    <div className="border-b border-gray-100 px-6 py-5 bg-white flex items-center justify-between sticky top-0 z-20">
+                        <h2 className="text-2xl font-bold text-gray-900">{selectedVenture.name}</h2>
+                        <span className="px-4 py-1.5 rounded-full bg-gray-100 text-gray-700 text-sm font-bold">
+                            {selectedVenture.status}
+                        </span>
                     </div>
 
                     <div className="p-8 space-y-8">
                         {/* Section 1: Dashboard Metrics */}
-                        <div className="grid grid-cols-4 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                 <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current Revenue</span>
                                 <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
@@ -661,17 +631,10 @@ export const VSMDashboard: React.FC = () => {
                                 </div>
                             </div>
                             <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current FTE</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Current Full Time Employees</span>
                                 <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
                                     <Users className="w-4 h-4 text-gray-400" />
                                     {selectedVenture.full_time_employees || '0'}
-                                </div>
-                            </div>
-                            <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">Target Jobs</span>
-                                <div className="text-xl font-bold text-gray-900 flex items-center gap-1">
-                                    <Target className="w-4 h-4 text-gray-400" />
-                                    {selectedVenture.incremental_hiring || 'TBD'}
                                 </div>
                             </div>
                         </div>
@@ -694,29 +657,36 @@ export const VSMDashboard: React.FC = () => {
                             <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 mb-6 space-y-4">
                                 <div className="grid grid-cols-3 gap-6">
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Founder Concept / Name</span>
-                                        <div className="font-medium text-gray-900">{selectedVenture.founder_name || selectedVenture.growth_current?.founder_name || 'N/A'}</div>
+                                        <span className="text-sm text-gray-600 block mb-1">Name: <span className="font-semibold text-gray-900">{selectedVenture.founder_name || selectedVenture.growth_current?.founder_name || 'N/A'}</span></span>
                                     </div>
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Role in Business</span>
+                                        <span className="text-sm text-gray-600 block mb-1">Mobile: <span className="font-semibold text-gray-900">{selectedVenture.growth_current?.phone || selectedVenture.growth_current?.mobile || 'N/A'}</span></span>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">Email: <span className="font-semibold text-gray-900">{selectedVenture.growth_current?.email || 'N/A'}</span></span>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">Registered company name</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.name || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">Designation (Your role in the company)</span>
                                         <div className="font-medium text-gray-900">{selectedVenture.growth_current?.role || 'N/A'}</div>
                                     </div>
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Email</span>
-                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.email || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">City / State</span>
-                                        <div className="font-medium text-gray-900">
-                                            {selectedVenture.growth_current?.city ? `${selectedVenture.growth_current.city}, ${selectedVenture.growth_current.state}` : selectedVenture.location || 'N/A'}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Business Type</span>
+                                        <span className="text-sm text-gray-600 block mb-1">Company type:</span>
                                         <div className="font-medium text-gray-900">{selectedVenture.growth_current?.business_type || 'N/A'}</div>
                                     </div>
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Referred By</span>
+                                        <span className="text-sm text-gray-600 block mb-1">Which city is your company primarily based in</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.city || selectedVenture.city || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">State in which your company is located</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.state || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">How did I hear about us:</span>
                                         <div className="font-medium text-gray-900">{selectedVenture.growth_current?.referred_by || 'N/A'}</div>
                                     </div>
                                 </div>
@@ -797,33 +767,38 @@ export const VSMDashboard: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Section 3: Operational Readiness (Read-Only 3x2 Grid) */}
+                        {/* Section 3: Growth Idea Support Status */}
                         <div>
-                            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                <Target className="w-5 h-5 text-gray-500" />
-                                Current Venture Status
+                            <h2 className="text-lg font-bold text-gray-900 mb-4">
+                                Growth Idea Support Status
                             </h2>
                             <div className="grid grid-cols-3 gap-4">
                                 {/* Row 1 */}
-                                {/* Row 1 */}
-                                {['Product', 'GTM', 'Funding'].map(stream => {
-                                    const rawStatus = selectedVenture.needs.find((n: any) => n.stream === stream)?.status || 'N/A';
+                                {['Product', 'Go-To-Market (GTM)', 'Capital Planning'].map(stream => {
+                                    const rawStatus = selectedVenture.needs.find((n: any) =>
+                                        n.stream === stream ||
+                                        (stream === 'Go-To-Market (GTM)' && n.stream === 'GTM') ||
+                                        (stream === 'Capital Planning' && n.stream === 'Funding')
+                                    )?.status || 'N/A';
 
                                     const legacyMapping: Record<string, string> = {
-                                        'Not started': 'Working on it',
-                                        'On track': 'No help needed',
-                                        'Need some advice': 'Need guidance',
-                                        'Completed': 'No help needed',
-                                        'Done': 'No help needed'
+                                        'Not started': 'Need some guidance',
+                                        'Working on it': 'Need some guidance',
+                                        'On track': "Don't need help",
+                                        'Need some advice': 'Need some guidance',
+                                        'Need guidance': 'Need some guidance',
+                                        'Completed': "Don't need help",
+                                        'Done': "Don't need help",
+                                        'No help needed': "Don't need help"
                                     };
 
                                     const mappedStatus = legacyMapping[rawStatus] || rawStatus;
                                     const normalizedStatus = Object.keys(STATUS_CONFIG).find(
                                         key => key.toLowerCase() === mappedStatus?.toLowerCase()
-                                    ) || 'N/A';
+                                    ) || mappedStatus;
 
                                     const config = STATUS_CONFIG[normalizedStatus] || {
-                                        icon: Circle,
+                                        icon: HelpCircle,
                                         color: 'text-gray-400',
                                         bg: 'bg-gray-50',
                                         border: 'border-gray-200'
@@ -833,35 +808,39 @@ export const VSMDashboard: React.FC = () => {
 
                                     return (
                                         <div key={stream}>
-                                            <span className="text-xs font-bold text-gray-400 uppercase block mb-1">{stream}</span>
+                                            <span className="text-sm font-semibold text-gray-900 block mb-2">{stream}</span>
                                             <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 border ${config.bg} ${config.border} ${config.color}`}>
                                                 <Icon className="w-4 h-4" />
-                                                {normalizedStatus !== 'N/A' ? normalizedStatus : rawStatus}
+                                                {normalizedStatus}
                                             </div>
                                         </div>
                                     );
                                 })}
                                 {/* Row 2 */}
-                                {['SupplyChain', 'Operations', 'Team'].map(stream => {
-                                    // Handle 'SupplyChain' vs 'Supply Chain' display mismatch if any, though form uses SupplyChain
-                                    const displayStream = stream === 'SupplyChain' ? 'Supply Chain' : stream;
-                                    const rawStatus = selectedVenture.needs.find((n: any) => n.stream === stream)?.status || 'N/A';
+                                {['Supply Chain', 'Operations', 'Team'].map(stream => {
+                                    const rawStatus = selectedVenture.needs.find((n: any) =>
+                                        n.stream === stream ||
+                                        (stream === 'Supply Chain' && n.stream === 'SupplyChain')
+                                    )?.status || 'N/A';
 
                                     const legacyMapping: Record<string, string> = {
-                                        'Not started': 'Working on it',
-                                        'On track': 'No help needed',
-                                        'Need some advice': 'Need guidance',
-                                        'Completed': 'No help needed',
-                                        'Done': 'No help needed'
+                                        'Not started': 'Need some guidance',
+                                        'Working on it': 'Need some guidance',
+                                        'On track': "Don't need help",
+                                        'Need some advice': 'Need some guidance',
+                                        'Need guidance': 'Need some guidance',
+                                        'Completed': "Don't need help",
+                                        'Done': "Don't need help",
+                                        'No help needed': "Don't need help"
                                     };
 
                                     const mappedStatus = legacyMapping[rawStatus] || rawStatus;
                                     const normalizedStatus = Object.keys(STATUS_CONFIG).find(
                                         key => key.toLowerCase() === mappedStatus?.toLowerCase()
-                                    ) || 'N/A';
+                                    ) || mappedStatus;
 
                                     const config = STATUS_CONFIG[normalizedStatus] || {
-                                        icon: Circle,
+                                        icon: HelpCircle,
                                         color: 'text-gray-400',
                                         bg: 'bg-gray-50',
                                         border: 'border-gray-200'
@@ -871,10 +850,10 @@ export const VSMDashboard: React.FC = () => {
 
                                     return (
                                         <div key={stream}>
-                                            <span className="text-xs font-bold text-gray-400 uppercase block mb-1">{displayStream}</span>
+                                            <span className="text-sm font-semibold text-gray-900 block mb-2">{stream}</span>
                                             <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 border ${config.bg} ${config.border} ${config.color}`}>
                                                 <Icon className="w-4 h-4" />
-                                                {normalizedStatus !== 'N/A' ? normalizedStatus : rawStatus}
+                                                {normalizedStatus}
                                             </div>
                                         </div>
                                     );
@@ -882,9 +861,48 @@ export const VSMDashboard: React.FC = () => {
                             </div>
                         </div>
 
+                        {/* Section 4: Company Document */}
+                        <div>
+                            <h2 className="text-lg font-bold text-gray-900 mb-4">
+                                Company Document
+                            </h2>
+                            <div className="bg-white border border-gray-200 rounded-xl p-6">
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Corporate presentation uploaded by the venture (screening manager can download)
+                                </p>
+                                {(selectedVenture as any).document_url || (selectedVenture as any).corporate_presentation_url ? (
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex-1 flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                            <FileText className="w-5 h-5 text-blue-600" />
+                                            <span className="text-sm font-medium text-gray-900">
+                                                {(selectedVenture as any).document_name || 'Corporate Presentation.pdf'}
+                                            </span>
+                                        </div>
+                                        <a
+                                            href={(selectedVenture as any).document_url || (selectedVenture as any).corporate_presentation_url}
+                                            download
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-semibold"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            Download
+                                        </a>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200 text-gray-500">
+                                        <AlertTriangle className="w-5 h-5 text-amber-500" />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">No document uploaded</p>
+                                            <p className="text-xs text-gray-500 mt-1">The venture did not upload a corporate presentation</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
 
                         {/* Section 5: Other Details (Optional, Collapsible) */}
-                        <OtherDetailsSection vsmNotes={vsmNotes} setVsmNotes={setVsmNotes} />
+                        <OtherDetailsSection selectedVenture={selectedVenture} vsmNotes={vsmNotes} setVsmNotes={setVsmNotes} />
 
                         {/* Section 6: Generate AI Insights CTA + Output */}
                         <AIInsightsSection
