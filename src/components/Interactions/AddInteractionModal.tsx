@@ -19,6 +19,7 @@ export const AddInteractionModal: React.FC<AddInteractionModalProps> = ({ onClos
     const [participantInput, setParticipantInput] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [uploadedFileName, setUploadedFileName] = useState<string>('');
 
     const handleAddParticipant = () => {
         if (participantInput.trim()) {
@@ -35,6 +36,32 @@ export const AddInteractionModal: React.FC<AddInteractionModalProps> = ({ onClos
             ...formData,
             participants: formData.participants?.filter((_, i) => i !== index)
         });
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Check if it's a text file
+        if (!file.type.includes('text') && !file.name.endsWith('.txt') && !file.name.endsWith('.log')) {
+            setError('Please upload a text file (.txt or .log)');
+            return;
+        }
+
+        // Check file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            setError('File size must be less than 5MB');
+            return;
+        }
+
+        try {
+            const text = await file.text();
+            setFormData({ ...formData, transcript: text });
+            setUploadedFileName(file.name);
+            setError('');
+        } catch (err) {
+            setError('Failed to read file. Please try again.');
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -196,13 +223,43 @@ export const AddInteractionModal: React.FC<AddInteractionModalProps> = ({ onClos
 
                         {/* Transcript/Notes */}
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                Transcript / Notes <span className="text-red-500">*</span>
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-sm font-semibold text-gray-700">
+                                    Transcript / Notes <span className="text-red-500">*</span>
+                                </label>
+                                <label className="cursor-pointer">
+                                    <input
+                                        type="file"
+                                        accept=".txt,.log,text/*"
+                                        onChange={handleFileUpload}
+                                        className="hidden"
+                                    />
+                                    <span className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-xs font-semibold text-purple-700 transition-colors">
+                                        <FileText className="w-3.5 h-3.5" />
+                                        Upload File
+                                    </span>
+                                </label>
+                            </div>
+                            {uploadedFileName && (
+                                <div className="mb-2 flex items-center gap-2 text-xs text-purple-700 bg-purple-50 px-3 py-2 rounded-lg border border-purple-200">
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span className="font-medium">Uploaded: {uploadedFileName}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setFormData({ ...formData, transcript: '' });
+                                            setUploadedFileName('');
+                                        }}
+                                        className="ml-auto hover:text-purple-900"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
                             <textarea
                                 value={formData.transcript}
                                 onChange={(e) => setFormData({ ...formData, transcript: e.target.value })}
-                                placeholder="Paste your call transcript here or add notes from the call..."
+                                placeholder="Paste your call transcript here or upload a text file..."
                                 rows={10}
                                 className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none resize-none font-mono text-sm"
                                 required
