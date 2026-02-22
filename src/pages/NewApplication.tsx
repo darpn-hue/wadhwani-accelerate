@@ -91,11 +91,6 @@ export const NewApplication: React.FC = () => {
                     return 'Please enter a valid email address';
                 }
                 break;
-            case 'incrementalHiring':
-                if (value && !/^\d+$/.test(value)) {
-                    return 'Please enter a valid number';
-                }
-                break;
         }
         return '';
     };
@@ -104,7 +99,7 @@ export const NewApplication: React.FC = () => {
         setFormData(prev => ({ ...prev, [field]: value }));
 
         // Validate on change for specific fields
-        if (['phone', 'email', 'incrementalHiring'].includes(field)) {
+        if (['phone', 'email'].includes(field)) {
             const error = validateField(field, value);
             setValidationErrors(prev => ({
                 ...prev,
