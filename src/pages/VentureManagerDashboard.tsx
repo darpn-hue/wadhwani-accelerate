@@ -435,29 +435,36 @@ export const VentureManagerDashboard: React.FC = () => {
                             <div className="bg-gray-50 rounded-xl p-5 border border-gray-200 mb-6 space-y-4">
                                 <div className="grid grid-cols-3 gap-6">
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Founder Name</span>
-                                        <div className="font-medium text-gray-900">{selectedVenture.founder_name || selectedVenture.growth_current?.founder_name || 'N/A'}</div>
+                                        <span className="text-sm text-gray-600 block mb-1">Name: <span className="font-semibold text-gray-900">{selectedVenture.founder_name || selectedVenture.growth_current?.founder_name || 'N/A'}</span></span>
                                     </div>
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Role in Business</span>
+                                        <span className="text-sm text-gray-600 block mb-1">Mobile: <span className="font-semibold text-gray-900">{selectedVenture.growth_current?.phone || selectedVenture.growth_current?.mobile || 'N/A'}</span></span>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">Email: <span className="font-semibold text-gray-900">{selectedVenture.growth_current?.email || 'N/A'}</span></span>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">Registered company name</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.name || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">Designation (Your role in the company)</span>
                                         <div className="font-medium text-gray-900">{selectedVenture.growth_current?.role || 'N/A'}</div>
                                     </div>
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Email</span>
-                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.email || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">City / State</span>
-                                        <div className="font-medium text-gray-900">
-                                            {selectedVenture.growth_current?.city ? `${selectedVenture.growth_current.city}, ${selectedVenture.growth_current.state}` : selectedVenture.location || 'N/A'}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Business Type</span>
+                                        <span className="text-sm text-gray-600 block mb-1">Company type:</span>
                                         <div className="font-medium text-gray-900">{selectedVenture.growth_current?.business_type || 'N/A'}</div>
                                     </div>
                                     <div>
-                                        <span className="text-xs font-bold text-gray-400 uppercase block mb-1">Referred By</span>
+                                        <span className="text-sm text-gray-600 block mb-1">Which city is your company primarily based in</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.city || selectedVenture.city || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">State in which your company is located</span>
+                                        <div className="font-medium text-gray-900">{selectedVenture.growth_current?.state || 'N/A'}</div>
+                                    </div>
+                                    <div>
+                                        <span className="text-sm text-gray-600 block mb-1">How did I hear about us:</span>
                                         <div className="font-medium text-gray-900">{selectedVenture.growth_current?.referred_by || 'N/A'}</div>
                                     </div>
                                 </div>
