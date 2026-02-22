@@ -213,19 +213,11 @@ export const NewApplication: React.FC = () => {
                     <p className="text-gray-500">
                         Thank you for applying. Your venture details are now with our Venture Success Managers. We will review your application and get back to you shortly.
                     </p>
-                    <div className="bg-blue-50 rounded-lg p-4 text-left text-sm space-y-2 text-blue-800">
-                        <div className="font-semibold">What happens next?</div>
-                        <ul className="list-disc list-inside pl-1 space-y-1 text-blue-700">
-                            <li>Initial Screening by Venture Success Manager</li>
-                            <li>Committee Review (for advanced tiers)</li>
-                            <li>Agreement Generation</li>
-                        </ul>
-                    </div>
                     <button
                         onClick={() => navigate('/dashboard')}
                         className="w-full py-3.5 px-6 rounded-xl font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                     >
-                        Return to My Ventures
+                        Okay
                     </button>
                 </div>
             </div>
